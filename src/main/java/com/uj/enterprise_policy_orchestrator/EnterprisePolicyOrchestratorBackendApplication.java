@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class EnterprisePolicyOrchestratorBackendApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(EnterprisePolicyOrchestratorBackendApplication.class, args);
-	}
-
+  static void main(String[] args) {
+    SpringApplication.run(EnterprisePolicyOrchestratorBackendApplication.class, args);
+  }
 }
