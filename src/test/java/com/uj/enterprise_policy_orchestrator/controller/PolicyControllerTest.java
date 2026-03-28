@@ -62,8 +62,8 @@ class PolicyControllerTest {
               LocalDateTime.now(),
               startsAt,
               expiresAt,
-              100,
-              5000,
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
               1,
               2);
 
@@ -114,8 +114,8 @@ class PolicyControllerTest {
               LocalDateTime.now(),
               LocalDateTime.of(2026, 5, 1, 0, 0, 0),
               null,
-              500,
-              10000,
+              new java.math.BigInteger("500"),
+              new java.math.BigInteger("10000"),
               2,
               3);
 
@@ -172,8 +172,8 @@ class PolicyControllerTest {
               now,
               now.plusDays(1),
               now.plusYears(1),
-              100,
-              5000,
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
               1,
               2);
 

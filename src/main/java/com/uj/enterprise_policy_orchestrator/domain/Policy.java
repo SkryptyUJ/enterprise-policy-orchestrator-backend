@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -49,14 +50,14 @@ public class Policy {
   @Column(name = "starts_at", nullable = false, updatable = false)
   private LocalDateTime startsAt;
 
-  @Column(name = "expires_at", updatable = false)
+  @Column(name = "expires_at", nullable = true, updatable = false)
   private LocalDateTime expiresAt;
 
   @Column(nullable = true, updatable = false)
-  private Integer minPrice;
+  private BigInteger minPrice;
 
   @Column(nullable = true, updatable = false)
-  private Integer maxPrice;
+  private BigInteger maxPrice;
 
   @Column(nullable = false, updatable = false)
   private Integer category;

@@ -54,8 +54,8 @@ class PolicyServiceTest {
               "Company travel expense policy",
               startsAt,
               expiresAt,
-              100,
-              5000,
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
               1,
               2);
 
@@ -91,8 +91,8 @@ class PolicyServiceTest {
               "Computer equipment policy",
               startsAt,
               null,
-              500,
-              10000,
+              new java.math.BigInteger("500"),
+              new java.math.BigInteger("10000"),
               2,
               3);
 
@@ -123,7 +123,17 @@ class PolicyServiceTest {
       Long nonExistentUserId = 999L;
       LocalDateTime startsAt = LocalDateTime.of(2026, 6, 1, 0, 0, 0);
       CreatePolicyDto dto =
-          new CreatePolicyDto(300L, 1, "Test Policy", "Test", startsAt, null, 0, 1000, 1, 1);
+          new CreatePolicyDto(
+              300L,
+              1,
+              "Test Policy",
+              "Test",
+              startsAt,
+              null,
+              new java.math.BigInteger("0"),
+              new java.math.BigInteger("1000"),
+              1,
+              1);
 
       when(userRepository.findById(nonExistentUserId)).thenReturn(Optional.empty());
 
@@ -154,8 +164,8 @@ class PolicyServiceTest {
               .createdAt(now)
               .startsAt(now.plusDays(1))
               .expiresAt(now.plusYears(1))
-              .minPrice(100)
-              .maxPrice(5000)
+              .minPrice(new java.math.BigInteger("100"))
+              .maxPrice(new java.math.BigInteger("5000"))
               .category(1)
               .authorizedRole(2)
               .build();
