@@ -1,8 +1,11 @@
 package com.uj.enterprise_policy_orchestrator.service;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.domain.User;
@@ -71,7 +74,6 @@ class PolicyServiceTest {
       assertThat(result.authorUserId()).isEqualTo(userId);
       assertThat(result.policyId()).isEqualTo(100L);
       assertThat(result.name()).isEqualTo("Travel Policy");
-      assertThat(result.isValid()).isTrue();
     }
 
     @Test
@@ -150,14 +152,12 @@ class PolicyServiceTest {
               .description("Test Description")
               .version(1)
               .createdAt(now)
-              .updatedAt(now)
               .startsAt(now.plusDays(1))
               .expiresAt(now.plusYears(1))
               .minPrice(100)
               .maxPrice(5000)
               .category(1)
               .authorizedRole(2)
-              .isValid(true)
               .build();
 
       when(policyRepository.findById(policyId)).thenReturn(Optional.of(policy));
@@ -166,7 +166,6 @@ class PolicyServiceTest {
 
       assertThat(result.id()).isEqualTo(policyId);
       assertThat(result.name()).isEqualTo("Test Policy");
-      assertThat(result.isValid()).isTrue();
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,23 @@ public class PolicyService {
             .orElseThrow(
                 () -> new EntityNotFoundException("User not found with id: " + authorUserId));
 
+    // Find and invalidate the active policy with the same policyId
+    Integer nextVersion = 1;
+    var existingPolicies = policyRepository.findByPolicyId(dto.policyId());
+
+    if (!existingPolicies.isEmpty()) {
+      LocalDateTime now = LocalDateTime.now();
+      var activePolicy =
+          existingPolicies.stream().filter(p -> isActiveDuringDate(p, now)).findFirst();
+
+      if (activePolicy.isPresent()) {
+        Policy active = activePolicy.get();
+        active.setExpiresAt(dto.startsAt());
+        policyRepository.save(active);
+        nextVersion = active.getVersion() + 1;
+      }
+    }
+
     Policy policy =
         Policy.builder()
             .policyId(dto.policyId())
@@ -39,7 +57,7 @@ public class PolicyService {
             .maxPrice(dto.maxPrice())
             .category(dto.category())
             .authorizedRole(dto.authorizedRole())
-            .isValid(true)
+            .version(nextVersion)
             .build();
 
     Policy saved = policyRepository.save(policy);
@@ -64,13 +82,16 @@ public class PolicyService {
         entity.getDescription(),
         entity.getVersion(),
         entity.getCreatedAt(),
-        entity.getUpdatedAt(),
         entity.getStartsAt(),
         entity.getExpiresAt(),
         entity.getMinPrice(),
         entity.getMaxPrice(),
         entity.getCategory(),
-        entity.getAuthorizedRole(),
-        entity.getIsValid());
+        entity.getAuthorizedRole());
+  }
+
+  private boolean isActiveDuringDate(Policy policy, LocalDateTime date) {
+    LocalDateTime expiresAt = policy.getExpiresAt();
+    return date.isAfter(policy.getStartsAt()) && (expiresAt == null || date.isBefore(expiresAt));
   }
 }

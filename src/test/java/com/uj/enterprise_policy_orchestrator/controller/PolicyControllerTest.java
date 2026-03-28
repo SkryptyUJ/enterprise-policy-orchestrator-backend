@@ -3,8 +3,10 @@ package com.uj.enterprise_policy_orchestrator.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
@@ -58,14 +60,12 @@ class PolicyControllerTest {
               "Company travel policy",
               1,
               LocalDateTime.now(),
-              LocalDateTime.now(),
               startsAt,
               expiresAt,
               100,
               5000,
               1,
-              2,
-              true);
+              2);
 
       when(policyService.createPolicy(eq(userId), any(CreatePolicyDto.class)))
           .thenReturn(responseDto);
@@ -94,8 +94,7 @@ class PolicyControllerTest {
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.id").value(100))
           .andExpect(jsonPath("$.authorUserId").value(1))
-          .andExpect(jsonPath("$.name").value("Travel Policy"))
-          .andExpect(jsonPath("$.isValid").value(true));
+          .andExpect(jsonPath("$.name").value("Travel Policy"));
     }
 
     @Test
@@ -113,14 +112,12 @@ class PolicyControllerTest {
               "Equipment policy",
               1,
               LocalDateTime.now(),
-              LocalDateTime.now(),
               LocalDateTime.of(2026, 5, 1, 0, 0, 0),
               null,
               500,
               10000,
               2,
-              3,
-              true);
+              3);
 
       when(policyService.createPolicy(eq(userId), any(CreatePolicyDto.class)))
           .thenReturn(responseDto);
@@ -173,14 +170,12 @@ class PolicyControllerTest {
               "Test Description",
               1,
               now,
-              now,
               now.plusDays(1),
               now.plusYears(1),
               100,
               5000,
               1,
-              2,
-              true);
+              2);
 
       when(policyService.getPolicyById(policyId)).thenReturn(responseDto);
 
@@ -188,8 +183,7 @@ class PolicyControllerTest {
           .perform(get("/api/users/{userId}/policies/{policyId}", 2L, policyId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.id").value(policyId))
-          .andExpect(jsonPath("$.name").value("Test Policy"))
-          .andExpect(jsonPath("$.isValid").value(true));
+          .andExpect(jsonPath("$.name").value("Test Policy"));
     }
   }
 }

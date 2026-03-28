@@ -11,11 +11,9 @@ public record PolicyDto(
     String description,
     Integer version,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt,
     LocalDateTime startsAt,
     LocalDateTime expiresAt,
     Integer minPrice,
     Integer maxPrice,
     Integer category,
-    Integer authorizedRole,
-    Boolean isValid) {}
+    Integer authorizedRole) {}
