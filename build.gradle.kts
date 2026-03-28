@@ -11,7 +11,7 @@ description = "Enterprise Policy Orchestrator backend"
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
@@ -44,10 +44,6 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
-}
-
-tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
-	mainClass.set("com.uj.enterprise_policy_orchestrator.EnterprisePolicyOrchestratorBackendApplication")
 }
 
 spotless {
