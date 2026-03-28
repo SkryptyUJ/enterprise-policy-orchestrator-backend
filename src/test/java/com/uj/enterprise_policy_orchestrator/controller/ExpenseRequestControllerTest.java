@@ -84,7 +84,8 @@ class ExpenseRequestControllerTest {
           .andExpect(jsonPath("$.userId").value(1))
           .andExpect(jsonPath("$.amount").value(1500.00))
           .andExpect(jsonPath("$.category").value("Business travel"))
-          .andExpect(jsonPath("$.description").value("Business trip to Krakow – train tickets and hotel"))
+          .andExpect(
+              jsonPath("$.description").value("Business trip to Krakow – train tickets and hotel"))
           .andExpect(jsonPath("$.expenseDate").value("2026-03-20"))
           .andExpect(jsonPath("$.submittedAt").exists());
     }

@@ -37,7 +37,8 @@ class ExpenseRequestServiceTest {
   class CreateExpenseRequest {
 
     @Test
-    @DisplayName("should create an expense request with given data and automatic submission timestamp")
+    @DisplayName(
+        "should create an expense request with given data and automatic submission timestamp")
     void shouldCreateExpenseRequestWithSubmittedAtTimestamp() {
       // given — employee exists in the system
       Long userId = 1L;
@@ -68,7 +69,8 @@ class ExpenseRequestServiceTest {
       assertThat(result.userId()).isEqualTo(userId);
       assertThat(result.amount()).isEqualByComparingTo("1500.00");
       assertThat(result.category()).isEqualTo("Business travel");
-      assertThat(result.description()).isEqualTo("Business trip to Krakow – train tickets and hotel");
+      assertThat(result.description())
+          .isEqualTo("Business trip to Krakow – train tickets and hotel");
       assertThat(result.expenseDate()).isEqualTo(LocalDate.of(2026, 3, 20));
 
       // then — system automatically assigns submission timestamp
@@ -152,8 +154,7 @@ class ExpenseRequestServiceTest {
       when(userRepository.findById(nonExistentUserId)).thenReturn(Optional.empty());
 
       // when & then
-      assertThatThrownBy(
-              () -> expenseRequestService.createExpenseRequest(nonExistentUserId, dto))
+      assertThatThrownBy(() -> expenseRequestService.createExpenseRequest(nonExistentUserId, dto))
           .isInstanceOf(EntityNotFoundException.class)
           .hasMessageContaining("999");
     }
