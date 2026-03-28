@@ -48,7 +48,7 @@ class PolicyServiceTest {
 
       CreatePolicyDto dto =
           new CreatePolicyDto(
-              100L,
+              "100",
               1,
               "Travel Policy",
               "Company travel expense policy",
@@ -72,7 +72,7 @@ class PolicyServiceTest {
 
       assertThat(result.id()).isEqualTo(1L);
       assertThat(result.authorUserId()).isEqualTo(userId);
-      assertThat(result.policyId()).isEqualTo(100L);
+      assertThat(result.policyId()).isEqualTo("100");
       assertThat(result.name()).isEqualTo("Travel Policy");
     }
 
@@ -85,7 +85,7 @@ class PolicyServiceTest {
 
       CreatePolicyDto dto =
           new CreatePolicyDto(
-              200L,
+              "200",
               2,
               "Hardware Policy",
               "Computer equipment policy",
@@ -112,7 +112,7 @@ class PolicyServiceTest {
 
       Policy saved = captor.getValue();
       assertThat(saved.getAuthorUserId()).isEqualTo(userId);
-      assertThat(saved.getPolicyId()).isEqualTo(200L);
+      assertThat(saved.getPolicyId()).isEqualTo("200");
       assertThat(saved.getName()).isEqualTo("Hardware Policy");
       assertThat(saved.getCategory()).isEqualTo(2);
     }
@@ -124,7 +124,7 @@ class PolicyServiceTest {
       LocalDateTime startsAt = LocalDateTime.of(2026, 6, 1, 0, 0, 0);
       CreatePolicyDto dto =
           new CreatePolicyDto(
-              300L,
+              "300",
               1,
               "Test Policy",
               "Test",
@@ -155,7 +155,7 @@ class PolicyServiceTest {
       Policy policy =
           Policy.builder()
               .id(policyId)
-              .policyId(100L)
+              .policyId("100")
               .authorUserId(5L)
               .categoryId(1)
               .name("Test Policy")

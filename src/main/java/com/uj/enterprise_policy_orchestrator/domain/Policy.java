@@ -27,7 +27,7 @@ public class Policy {
   private Long id;
 
   @Column(nullable = false, updatable = false)
-  private Long policyId;
+  private String policyId;
 
   @Column(nullable = false, updatable = false)
   private Long authorUserId;

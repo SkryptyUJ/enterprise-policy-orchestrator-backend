@@ -4,7 +4,7 @@ import java.math.BigInteger;
 import java.time.LocalDateTime;
 
 public record CreatePolicyDto(
-    Long policyId,
+    String policyId,
     Integer categoryId,
     String name,
     String description,

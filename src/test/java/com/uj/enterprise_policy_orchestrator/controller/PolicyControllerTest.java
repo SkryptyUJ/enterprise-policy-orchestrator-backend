@@ -53,7 +53,7 @@ class PolicyControllerTest {
       PolicyDto responseDto =
           new PolicyDto(
               100L,
-              100L,
+              "100",
               userId,
               1,
               "Travel Policy",
@@ -73,7 +73,7 @@ class PolicyControllerTest {
       String requestJson =
           """
           {
-            "policyId": 100,
+            "policyId": "100",
             "categoryId": 1,
             "name": "Travel Policy",
             "description": "Company travel policy",
@@ -105,7 +105,7 @@ class PolicyControllerTest {
       PolicyDto responseDto =
           new PolicyDto(
               50L,
-              200L,
+              "200",
               userId,
               2,
               "Hardware Policy",
@@ -145,7 +145,7 @@ class PolicyControllerTest {
                   .content(requestJson))
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.authorUserId").value(5))
-          .andExpect(jsonPath("$.policyId").value(200))
+          .andExpect(jsonPath("$.policyId").value("200"))
           .andExpect(jsonPath("$.category").value(2));
     }
   }
@@ -163,7 +163,7 @@ class PolicyControllerTest {
       PolicyDto responseDto =
           new PolicyDto(
               policyId,
-              100L,
+              "100",
               2L,
               1,
               "Test Policy",
