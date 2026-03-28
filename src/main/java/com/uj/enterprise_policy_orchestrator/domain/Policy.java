@@ -50,10 +50,10 @@ public class Policy {
   @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
 
-  @Column(name = "expires_at", nullable = false)
+  @Column(name = "starts_at", nullable = false)
   private LocalDateTime startsAt;
 
-  @Column(name = "expires_at", nullable = true)
+  @Column(name = "expires_at")
   private LocalDateTime expiresAt;
 
   @Column(nullable = true)
@@ -75,7 +75,6 @@ public class Policy {
   protected void onCreate() {
     createdAt = LocalDateTime.now();
     updatedAt = LocalDateTime.now();
-    expiresAt = null;
     if (version == null) {
       version = 1;
     }
