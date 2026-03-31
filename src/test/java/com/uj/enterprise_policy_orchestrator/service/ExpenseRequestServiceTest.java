@@ -5,8 +5,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
+import com.uj.enterprise_policy_orchestrator.domain.Policy;
+import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -47,7 +50,8 @@ class ExpenseRequestServiceTest {
               "Business trip to Krakow – train tickets and hotel",
               LocalDate.of(2026, 3, 20));
 
-      when(policyService.findApplicablePolicies(any(), any(), any())).thenReturn(Set.of());
+      when(policyService.findApplicablePolicies(any(), any(), any()))
+          .thenReturn(Set.of(new Policy()));
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
           .thenAnswer(
@@ -69,6 +73,7 @@ class ExpenseRequestServiceTest {
       assertThat(result.description())
           .isEqualTo("Business trip to Krakow – train tickets and hotel");
       assertThat(result.expenseDate()).isEqualTo(LocalDate.of(2026, 3, 20));
+      assertThat(result.status()).isEqualTo(ExpenseRequestStatus.WAITING_FOR_APPROVAL);
 
       // then — system automatically assigns submission timestamp
       assertThat(result.submittedAt()).isNotNull();
@@ -85,7 +90,8 @@ class ExpenseRequestServiceTest {
           new CreateExpenseRequestDto(
               new BigDecimal("250.00"), "Office supplies", "Printer toner", LocalDate.now());
 
-      when(policyService.findApplicablePolicies(any(), any(), any())).thenReturn(Set.of());
+      when(policyService.findApplicablePolicies(any(), any(), any()))
+          .thenReturn(Set.of(new Policy()));
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
           .thenAnswer(
@@ -109,6 +115,25 @@ class ExpenseRequestServiceTest {
       assertThat(saved.getCategory()).isEqualTo("Office supplies");
       assertThat(saved.getDescription()).isEqualTo("Printer toner");
       assertThat(saved.getExpenseDate()).isEqualTo(LocalDate.now());
+      assertThat(saved.getStatus()).isEqualTo(ExpenseRequestStatus.WAITING_FOR_APPROVAL);
+    }
+
+    @Test
+    @DisplayName("should decline request when no applicable policies are found")
+    void shouldDeclineWhenNoApplicablePoliciesFound() {
+      Long userId = 2L;
+
+      CreateExpenseRequestDto dto =
+          new CreateExpenseRequestDto(
+              new BigDecimal("99.99"), "Misc", "Snacks", LocalDate.of(2026, 7, 1));
+
+      when(policyService.findApplicablePolicies(any(), any(), any())).thenReturn(Set.of());
+
+      assertThatThrownBy(() -> expenseRequestService.createExpenseRequest(userId, dto))
+          .isInstanceOf(NoApplicablePoliciesException.class)
+          .hasMessage("Decline, no matching policies");
+
+      verify(expenseRequestRepository, never()).save(any());
     }
   }
 }

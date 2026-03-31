@@ -6,8 +6,10 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.service.ExpenseRequestService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -57,7 +59,8 @@ class ExpenseRequestControllerTest {
               "Business travel",
               "Business trip to Krakow – train tickets and hotel",
               LocalDate.of(2026, 3, 20),
-              submittedAt);
+              submittedAt,
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL);
 
       when(expenseRequestService.createExpenseRequest(
               eq(userId), any(CreateExpenseRequestDto.class)))
@@ -87,7 +90,8 @@ class ExpenseRequestControllerTest {
           .andExpect(
               jsonPath("$.description").value("Business trip to Krakow – train tickets and hotel"))
           .andExpect(jsonPath("$.expenseDate").value("2026-03-20"))
-          .andExpect(jsonPath("$.submittedAt").exists());
+          .andExpect(jsonPath("$.submittedAt").exists())
+          .andExpect(jsonPath("$.status").value("WAITING_FOR_APPROVAL"));
     }
 
     @Test
@@ -104,7 +108,8 @@ class ExpenseRequestControllerTest {
               "Office supplies",
               "Pens",
               LocalDate.of(2026, 6, 15),
-              LocalDateTime.now());
+              LocalDateTime.now(),
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL);
 
       when(expenseRequestService.createExpenseRequest(
               eq(userId), any(CreateExpenseRequestDto.class)))
@@ -129,7 +134,36 @@ class ExpenseRequestControllerTest {
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.userId").value(5))
           .andExpect(jsonPath("$.amount").value(42.50))
-          .andExpect(jsonPath("$.category").value("Office supplies"));
+          .andExpect(jsonPath("$.category").value("Office supplies"))
+          .andExpect(jsonPath("$.status").value("WAITING_FOR_APPROVAL"));
+    }
+
+    @Test
+    @DisplayName("should return 400 when no applicable policies exist")
+    void shouldReturn400WhenNoApplicablePoliciesExist() throws Exception {
+      Long userId = 7L;
+
+      when(expenseRequestService.createExpenseRequest(
+              eq(userId), any(CreateExpenseRequestDto.class)))
+          .thenThrow(new NoApplicablePoliciesException());
+
+      String requestJson =
+          """
+          {
+            "amount": 10.00,
+            "category": "Snacks",
+            "description": "Coffee",
+            "expenseDate": "2026-02-01"
+          }
+          """;
+
+      mockMvc
+          .perform(
+              post("/api/users/{userId}/expense-requests", userId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(requestJson))
+          .andExpect(status().isBadRequest())
+          .andExpect(status().reason("Decline, no matching policies"));
     }
   }
 }

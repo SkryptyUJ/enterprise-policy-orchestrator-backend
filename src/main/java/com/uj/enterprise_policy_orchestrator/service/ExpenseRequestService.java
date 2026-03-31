@@ -2,8 +2,10 @@ package com.uj.enterprise_policy_orchestrator.service;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
+import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +28,15 @@ public class ExpenseRequestService {
             .category(dto.category())
             .description(dto.description())
             .expenseDate(dto.expenseDate())
+            .status(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
             .build();
 
     Set<Policy> applicablePolicies = findApplicablePolicies(request);
+    if (applicablePolicies.isEmpty()) {
+      request.setStatus(ExpenseRequestStatus.DECLINED);
+      throw new NoApplicablePoliciesException();
+    }
+
     request.getApplicablePolicies().addAll(applicablePolicies);
 
     ExpenseRequest saved = expenseRequestRepository.save(request);
@@ -48,6 +56,7 @@ public class ExpenseRequestService {
         entity.getCategory(),
         entity.getDescription(),
         entity.getExpenseDate(),
-        entity.getSubmittedAt());
+        entity.getSubmittedAt(),
+        entity.getStatus());
   }
 }

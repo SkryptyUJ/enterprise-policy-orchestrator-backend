@@ -1,5 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.domain;
 
+import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -41,6 +42,10 @@ public class ExpenseRequest {
   @Column(name = "submitted_at", nullable = false, updatable = false)
   private LocalDateTime submittedAt;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 50)
+  private ExpenseRequestStatus status;
+
   @ManyToMany
   @JoinTable(
       name = "expense_request_policy",
@@ -51,5 +56,8 @@ public class ExpenseRequest {
   @PrePersist
   protected void onCreate() {
     submittedAt = LocalDateTime.now();
+    if (status == null) {
+      status = ExpenseRequestStatus.WAITING_FOR_APPROVAL;
+    }
   }
 }
