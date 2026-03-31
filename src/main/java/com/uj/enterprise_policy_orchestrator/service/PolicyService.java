@@ -1,11 +1,9 @@
 package com.uj.enterprise_policy_orchestrator.service;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.User;
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
-import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,16 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class PolicyService {
 
   private final PolicyRepository policyRepository;
-  private final UserRepository userRepository;
 
   @Transactional
   public PolicyDto createPolicy(Long authorUserId, CreatePolicyDto dto) {
-    User author =
-        userRepository
-            .findById(authorUserId)
-            .orElseThrow(
-                () -> new EntityNotFoundException("User not found with id: " + authorUserId));
-
     Policy policy =
         Policy.builder()
             .policyId(dto.policyId())

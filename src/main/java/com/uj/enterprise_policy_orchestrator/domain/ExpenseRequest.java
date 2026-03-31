@@ -21,9 +21,8 @@ public class ExpenseRequest {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", nullable = false)
-  private User user;
+  @Column(nullable = false)
+  private Long userId;
 
   @Column(nullable = false, precision = 19, scale = 2)
   private BigDecimal amount;

@@ -2,7 +2,7 @@
 CREATE TABLE policy (
     id BIGSERIAL PRIMARY KEY,
     policy_id BIGINT NOT NULL,
-    author_user_id BIGINT NOT NULL REFERENCES users(id),
+    author_user_id BIGINT NOT NULL,
     category_id INT NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,

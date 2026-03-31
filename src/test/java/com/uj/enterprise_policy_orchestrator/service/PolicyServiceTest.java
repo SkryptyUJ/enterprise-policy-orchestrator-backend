@@ -5,11 +5,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.User;
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
-import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -27,7 +25,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class PolicyServiceTest {
 
   @Mock private PolicyRepository policyRepository;
-  @Mock private UserRepository userRepository;
   @InjectMocks private PolicyService policyService;
 
   @Nested
@@ -38,7 +35,6 @@ class PolicyServiceTest {
     @DisplayName("should create a policy with given data and automatic timestamps")
     void shouldCreatePolicyWithTimestamps() {
       Long userId = 1L;
-      User author = User.builder().id(userId).username("admin.user").build();
 
       LocalDateTime startsAt = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       LocalDateTime expiresAt = LocalDateTime.of(2027, 3, 31, 23, 59, 59);
@@ -56,7 +52,6 @@ class PolicyServiceTest {
               1,
               2);
 
-      when(userRepository.findById(userId)).thenReturn(Optional.of(author));
       when(policyRepository.save(any(Policy.class)))
           .thenAnswer(
               invocation -> {
@@ -78,7 +73,6 @@ class PolicyServiceTest {
     @DisplayName("should persist the policy in the database")
     void shouldPersistPolicyInDatabase() {
       Long userId = 2L;
-      User author = User.builder().id(userId).username("policy.creator").build();
       LocalDateTime startsAt = LocalDateTime.of(2026, 5, 1, 0, 0, 0);
 
       CreatePolicyDto dto =
@@ -94,7 +88,6 @@ class PolicyServiceTest {
               2,
               3);
 
-      when(userRepository.findById(userId)).thenReturn(Optional.of(author));
       when(policyRepository.save(any(Policy.class)))
           .thenAnswer(
               invocation -> {
@@ -115,69 +108,54 @@ class PolicyServiceTest {
       assertThat(saved.getCategory()).isEqualTo(2);
     }
 
-    @Test
-    @DisplayName("should throw exception when the user does not exist")
-    void shouldThrowWhenUserNotFound() {
-      Long nonExistentUserId = 999L;
-      LocalDateTime startsAt = LocalDateTime.of(2026, 6, 1, 0, 0, 0);
-      CreatePolicyDto dto =
-          new CreatePolicyDto(300L, 1, "Test Policy", "Test", startsAt, null, 0, 1000, 1, 1);
+    @Nested
+    @DisplayName("Scenario 2: User retrieves an existing policy")
+    class GetPolicy {
 
-      when(userRepository.findById(nonExistentUserId)).thenReturn(Optional.empty());
+      @Test
+      @DisplayName("should retrieve policy by id")
+      void shouldRetrievePolicyById() {
+        Long policyId = 1L;
+        LocalDateTime now = LocalDateTime.now();
+        Policy policy =
+            Policy.builder()
+                .id(policyId)
+                .policyId(100L)
+                .authorUserId(5L)
+                .categoryId(1)
+                .name("Test Policy")
+                .description("Test Description")
+                .version(1)
+                .createdAt(now)
+                .updatedAt(now)
+                .startsAt(now.plusDays(1))
+                .expiresAt(now.plusYears(1))
+                .minPrice(100)
+                .maxPrice(5000)
+                .category(1)
+                .authorizedRole(2)
+                .isValid(true)
+                .build();
 
-      assertThatThrownBy(() -> policyService.createPolicy(nonExistentUserId, dto))
-          .isInstanceOf(EntityNotFoundException.class)
-          .hasMessageContaining("999");
-    }
-  }
+        when(policyRepository.findById(policyId)).thenReturn(Optional.of(policy));
 
-  @Nested
-  @DisplayName("Scenario 2: User retrieves an existing policy")
-  class GetPolicy {
+        PolicyDto result = policyService.getPolicyById(policyId);
 
-    @Test
-    @DisplayName("should retrieve policy by id")
-    void shouldRetrievePolicyById() {
-      Long policyId = 1L;
-      LocalDateTime now = LocalDateTime.now();
-      Policy policy =
-          Policy.builder()
-              .id(policyId)
-              .policyId(100L)
-              .authorUserId(5L)
-              .categoryId(1)
-              .name("Test Policy")
-              .description("Test Description")
-              .version(1)
-              .createdAt(now)
-              .updatedAt(now)
-              .startsAt(now.plusDays(1))
-              .expiresAt(now.plusYears(1))
-              .minPrice(100)
-              .maxPrice(5000)
-              .category(1)
-              .authorizedRole(2)
-              .isValid(true)
-              .build();
+        assertThat(result.id()).isEqualTo(policyId);
+        assertThat(result.name()).isEqualTo("Test Policy");
+        assertThat(result.isValid()).isTrue();
+      }
 
-      when(policyRepository.findById(policyId)).thenReturn(Optional.of(policy));
+      @Test
+      @DisplayName("should throw exception when policy not found")
+      void shouldThrowWhenPolicyNotFound() {
+        Long nonExistentPolicyId = 999L;
+        when(policyRepository.findById(nonExistentPolicyId)).thenReturn(Optional.empty());
 
-      PolicyDto result = policyService.getPolicyById(policyId);
-
-      assertThat(result.id()).isEqualTo(policyId);
-      assertThat(result.name()).isEqualTo("Test Policy");
-      assertThat(result.isValid()).isTrue();
-    }
-
-    @Test
-    @DisplayName("should throw exception when policy not found")
-    void shouldThrowWhenPolicyNotFound() {
-      Long nonExistentPolicyId = 999L;
-      when(policyRepository.findById(nonExistentPolicyId)).thenReturn(Optional.empty());
-
-      assertThatThrownBy(() -> policyService.getPolicyById(nonExistentPolicyId))
-          .isInstanceOf(EntityNotFoundException.class)
-          .hasMessageContaining("999");
+        assertThatThrownBy(() -> policyService.getPolicyById(nonExistentPolicyId))
+            .isInstanceOf(EntityNotFoundException.class)
+            .hasMessageContaining("999");
+      }
     }
   }
 }

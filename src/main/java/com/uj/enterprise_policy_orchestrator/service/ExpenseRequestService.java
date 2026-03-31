@@ -1,12 +1,9 @@
 package com.uj.enterprise_policy_orchestrator.service;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
-import com.uj.enterprise_policy_orchestrator.domain.User;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
-import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,18 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExpenseRequestService {
 
   private final ExpenseRequestRepository expenseRequestRepository;
-  private final UserRepository userRepository;
 
   @Transactional
   public ExpenseRequestDto createExpenseRequest(Long userId, CreateExpenseRequestDto dto) {
-    User user =
-        userRepository
-            .findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
-
     ExpenseRequest request =
         ExpenseRequest.builder()
-            .user(user)
+            .userId(userId)
             .amount(dto.amount())
             .category(dto.category())
             .description(dto.description())
@@ -41,7 +32,7 @@ public class ExpenseRequestService {
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
     return new ExpenseRequestDto(
         entity.getId(),
-        entity.getUser().getId(),
+        entity.getUserId(),
         entity.getAmount(),
         entity.getCategory(),
         entity.getDescription(),
