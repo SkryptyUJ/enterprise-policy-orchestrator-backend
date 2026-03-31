@@ -9,6 +9,7 @@ import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -36,8 +37,8 @@ class PolicyServiceTest {
     void shouldCreatePolicyWithTimestamps() {
       Long userId = 1L;
 
-      LocalDateTime startsAt = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
-      LocalDateTime expiresAt = LocalDateTime.of(2027, 3, 31, 23, 59, 59);
+      LocalDate startsAt = LocalDate.of(2026, 4, 1);
+      LocalDate expiresAt = LocalDate.of(2027, 3, 31);
 
       CreatePolicyDto dto =
           new CreatePolicyDto(
@@ -49,7 +50,7 @@ class PolicyServiceTest {
               expiresAt,
               100,
               5000,
-              1,
+              "Travel",
               2);
 
       when(policyRepository.save(any(Policy.class)))
@@ -73,7 +74,7 @@ class PolicyServiceTest {
     @DisplayName("should persist the policy in the database")
     void shouldPersistPolicyInDatabase() {
       Long userId = 2L;
-      LocalDateTime startsAt = LocalDateTime.of(2026, 5, 1, 0, 0, 0);
+      LocalDate startsAt = LocalDate.of(2026, 5, 1);
 
       CreatePolicyDto dto =
           new CreatePolicyDto(
@@ -85,7 +86,7 @@ class PolicyServiceTest {
               null,
               500,
               10000,
-              2,
+              "Hardware",
               3);
 
       when(policyRepository.save(any(Policy.class)))
@@ -116,7 +117,8 @@ class PolicyServiceTest {
       @DisplayName("should retrieve policy by id")
       void shouldRetrievePolicyById() {
         Long policyId = 1L;
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate nowDate = LocalDate.now();
+        LocalDateTime now = java.time.LocalDateTime.now();
         Policy policy =
             Policy.builder()
                 .id(policyId)
@@ -128,11 +130,11 @@ class PolicyServiceTest {
                 .version(1)
                 .createdAt(now)
                 .updatedAt(now)
-                .startsAt(now.plusDays(1))
-                .expiresAt(now.plusYears(1))
+                .startsAt(nowDate.plusDays(1))
+                .expiresAt(nowDate.plusYears(1))
                 .minPrice(100)
                 .maxPrice(5000)
-                .category(1)
+                .category("TestCategory")
                 .authorizedRole(2)
                 .isValid(true)
                 .build();

@@ -1,5 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.dto;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record PolicyDto(
@@ -12,10 +13,10 @@ public record PolicyDto(
     Integer version,
     LocalDateTime createdAt,
     LocalDateTime updatedAt,
-    LocalDateTime startsAt,
-    LocalDateTime expiresAt,
+    LocalDate startsAt,
+    LocalDate expiresAt,
     Integer minPrice,
     Integer maxPrice,
-    Integer category,
+    String category,
     Integer authorizedRole,
     Boolean isValid) {}

@@ -5,6 +5,16 @@ import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +53,22 @@ public class PolicyService {
             .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Policy not found with id: " + id));
     return toDto(policy);
+  }
+
+  public Set<Policy> findApplicablePolicies(
+      String category, LocalDate expenseDate, BigDecimal amount) {
+    List<Policy> applicablePolicies =
+        policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount);
+
+    Map<Long, Policy> latestByPolicyId =
+        applicablePolicies.stream()
+            .collect(
+                Collectors.toMap(
+                    Policy::getPolicyId,
+                    Function.identity(),
+                    BinaryOperator.maxBy(Comparator.comparing(Policy::getUpdatedAt))));
+
+    return new HashSet<>(latestByPolicyId.values());
   }
 
   private PolicyDto toDto(Policy entity) {

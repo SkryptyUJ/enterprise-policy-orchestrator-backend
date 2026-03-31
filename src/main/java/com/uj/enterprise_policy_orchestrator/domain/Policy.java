@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -51,10 +52,10 @@ public class Policy {
   private LocalDateTime updatedAt;
 
   @Column(name = "starts_at", nullable = false)
-  private LocalDateTime startsAt;
+  private LocalDate startsAt;
 
   @Column(name = "expires_at")
-  private LocalDateTime expiresAt;
+  private LocalDate expiresAt;
 
   @Column(nullable = true)
   private Integer minPrice;
@@ -63,7 +64,7 @@ public class Policy {
   private Integer maxPrice;
 
   @Column(nullable = false)
-  private Integer category;
+  private String category;
 
   @Column(nullable = false)
   private Integer authorizedRole; /* @todo enum and strict definitions */

@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -38,6 +40,13 @@ public class ExpenseRequest {
 
   @Column(name = "submitted_at", nullable = false, updatable = false)
   private LocalDateTime submittedAt;
+
+  @ManyToMany
+  @JoinTable(
+      name = "expense_request_policy",
+      joinColumns = @JoinColumn(name = "request_id"),
+      inverseJoinColumns = @JoinColumn(name = "policy_id"))
+  private final Set<Policy> applicablePolicies = new HashSet<>();
 
   @PrePersist
   protected void onCreate() {

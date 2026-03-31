@@ -11,6 +11,7 @@ import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ExpenseRequestServiceTest {
 
   @Mock private ExpenseRequestRepository expenseRequestRepository;
+  @Mock private PolicyService policyService;
   @InjectMocks private ExpenseRequestService expenseRequestService;
 
   @Nested
@@ -44,6 +46,8 @@ class ExpenseRequestServiceTest {
               "Business travel",
               "Business trip to Krakow – train tickets and hotel",
               LocalDate.of(2026, 3, 20));
+
+      when(policyService.findApplicablePolicies(any(), any(), any())).thenReturn(Set.of());
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
           .thenAnswer(
@@ -80,6 +84,8 @@ class ExpenseRequestServiceTest {
       CreateExpenseRequestDto dto =
           new CreateExpenseRequestDto(
               new BigDecimal("250.00"), "Office supplies", "Printer toner", LocalDate.now());
+
+      when(policyService.findApplicablePolicies(any(), any(), any())).thenReturn(Set.of());
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
           .thenAnswer(

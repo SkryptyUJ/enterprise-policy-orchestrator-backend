@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.service.PolicyService;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,8 +46,8 @@ class PolicyControllerTest {
     @DisplayName("should return 201 CREATED with the new policy data")
     void shouldReturn201WithCreatedPolicy() throws Exception {
       Long userId = 1L;
-      LocalDateTime startsAt = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
-      LocalDateTime expiresAt = LocalDateTime.of(2027, 3, 31, 23, 59, 59);
+      LocalDate startsAt = LocalDate.of(2026, 4, 1);
+      LocalDate expiresAt = LocalDate.of(2027, 3, 31);
 
       PolicyDto responseDto =
           new PolicyDto(
@@ -63,7 +64,7 @@ class PolicyControllerTest {
               expiresAt,
               100,
               5000,
-              1,
+              "Travels",
               2,
               true);
 
@@ -77,8 +78,8 @@ class PolicyControllerTest {
             "categoryId": 1,
             "name": "Travel Policy",
             "description": "Company travel policy",
-            "startsAt": "2026-04-01T00:00:00",
-            "expiresAt": "2027-03-31T23:59:59",
+             "startsAt": "2026-04-01",
+             "expiresAt": "2027-03-31",
             "minPrice": 100,
             "maxPrice": 5000,
             "category": 1,
@@ -114,11 +115,11 @@ class PolicyControllerTest {
               1,
               LocalDateTime.now(),
               LocalDateTime.now(),
-              LocalDateTime.of(2026, 5, 1, 0, 0, 0),
+              LocalDate.of(2026, 5, 1),
               null,
               500,
               10000,
-              2,
+              "Equipment",
               3,
               true);
 
@@ -132,7 +133,7 @@ class PolicyControllerTest {
             "categoryId": 2,
             "name": "Hardware Policy",
             "description": "Equipment policy",
-            "startsAt": "2026-05-01T00:00:00",
+             "startsAt": "2026-05-01",
             "expiresAt": null,
             "minPrice": 500,
             "maxPrice": 10000,
@@ -162,6 +163,7 @@ class PolicyControllerTest {
     void shouldReturn200WithPolicyData() throws Exception {
       Long policyId = 1L;
       LocalDateTime now = LocalDateTime.now();
+      LocalDate nowDate = LocalDate.now();
 
       PolicyDto responseDto =
           new PolicyDto(
@@ -174,11 +176,11 @@ class PolicyControllerTest {
               1,
               now,
               now,
-              now.plusDays(1),
-              now.plusYears(1),
+              nowDate.plusDays(1),
+              nowDate.plusYears(1),
               100,
               5000,
-              1,
+              "TestCategory",
               2,
               true);
 

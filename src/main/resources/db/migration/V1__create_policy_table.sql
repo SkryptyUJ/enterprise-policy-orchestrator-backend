@@ -9,11 +9,11 @@ CREATE TABLE policy (
     version INT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    starts_at TIMESTAMP NOT NULL,
-    expires_at TIMESTAMP,
+    starts_at DATE NOT NULL,
+    expires_at DATE,
     min_price INT,
     max_price INT,
-    category INT NOT NULL,
+    category VARCHAR(255) NOT NULL,
     authorized_role INT NOT NULL,
     is_valid BOOLEAN NOT NULL DEFAULT TRUE
 );

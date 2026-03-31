@@ -1,9 +1,11 @@
 package com.uj.enterprise_policy_orchestrator.service;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
+import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExpenseRequestService {
 
   private final ExpenseRequestRepository expenseRequestRepository;
+  private final PolicyService policyService;
 
   @Transactional
   public ExpenseRequestDto createExpenseRequest(Long userId, CreateExpenseRequestDto dto) {
@@ -25,8 +28,16 @@ public class ExpenseRequestService {
             .expenseDate(dto.expenseDate())
             .build();
 
+    Set<Policy> applicablePolicies = findApplicablePolicies(request);
+    request.getApplicablePolicies().addAll(applicablePolicies);
+
     ExpenseRequest saved = expenseRequestRepository.save(request);
     return toDto(saved);
+  }
+
+  private Set<Policy> findApplicablePolicies(ExpenseRequest exp) {
+    return policyService.findApplicablePolicies(
+        exp.getCategory(), exp.getExpenseDate(), exp.getAmount());
   }
 
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
