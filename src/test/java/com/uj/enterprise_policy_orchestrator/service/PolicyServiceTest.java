@@ -9,9 +9,12 @@ import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -106,7 +109,8 @@ class PolicyServiceTest {
       assertThat(saved.getAuthorUserId()).isEqualTo(userId);
       assertThat(saved.getPolicyId()).isEqualTo(200L);
       assertThat(saved.getName()).isEqualTo("Hardware Policy");
-      assertThat(saved.getCategory()).isEqualTo(2);
+      assertThat(saved.getCategoryId()).isEqualTo(2);
+      assertThat(saved.getCategory()).isEqualTo("Hardware");
     }
 
     @Nested
@@ -159,5 +163,110 @@ class PolicyServiceTest {
             .hasMessageContaining("999");
       }
     }
+  }
+
+  @Nested
+  @DisplayName("Scenario 3: Determine applicable policies")
+  class FindApplicablePolicies {
+
+    private final LocalDate expenseDate = LocalDate.of(2026, 4, 1);
+    private final BigDecimal amount = BigDecimal.valueOf(750);
+
+    @Test
+    @DisplayName("should return only the latest version per policyId")
+    void shouldReturnLatestVersionPerPolicyId() {
+      Policy olderVersion =
+          policy(
+              1L,
+              500L,
+              "Travel",
+              expenseDate.minusDays(5),
+              expenseDate.plusDays(10),
+              1,
+              100,
+              1500,
+              LocalDateTime.of(2026, 3, 30, 10, 0));
+      Policy newerVersion =
+          policy(
+              2L,
+              500L,
+              "Travel",
+              expenseDate.minusDays(5),
+              expenseDate.plusDays(10),
+              2,
+              100,
+              1500,
+              LocalDateTime.of(2026, 3, 31, 10, 0));
+      Policy otherPolicy =
+          policy(
+              3L,
+              600L,
+              "Equipment",
+              expenseDate.minusDays(2),
+              expenseDate.plusDays(30),
+              1,
+              200,
+              5000,
+              LocalDateTime.of(2026, 3, 29, 9, 0));
+
+      when(policyRepository.findByCategoryAndDateAndAmount("Travel", expenseDate, amount))
+          .thenReturn(List.of(olderVersion, newerVersion, otherPolicy));
+
+      Set<Policy> result = policyService.findApplicablePolicies("Travel", expenseDate, amount);
+
+      assertThat(result).containsExactlyInAnyOrder(newerVersion, otherPolicy);
+    }
+
+    @Test
+    @DisplayName("should delegate filter parameters to repository")
+    void shouldDelegateFiltersToRepository() {
+      when(policyRepository.findByCategoryAndDateAndAmount("Hardware", expenseDate, amount))
+          .thenReturn(List.of());
+
+      policyService.findApplicablePolicies("Hardware", expenseDate, amount);
+
+      verify(policyRepository).findByCategoryAndDateAndAmount("Hardware", expenseDate, amount);
+    }
+
+    @Test
+    @DisplayName("should return empty set when no policies match filters")
+    void shouldReturnEmptySetWhenNoMatches() {
+      when(policyRepository.findByCategoryAndDateAndAmount("Travel", expenseDate, amount))
+          .thenReturn(List.of());
+
+      Set<Policy> result = policyService.findApplicablePolicies("Travel", expenseDate, amount);
+
+      assertThat(result).isEmpty();
+    }
+  }
+
+  private Policy policy(
+      Long id,
+      Long policyId,
+      String category,
+      LocalDate startsAt,
+      LocalDate expiresAt,
+      Integer version,
+      Integer minPrice,
+      Integer maxPrice,
+      LocalDateTime updatedAt) {
+    return Policy.builder()
+        .id(id)
+        .policyId(policyId)
+        .authorUserId(1L)
+        .categoryId(1)
+        .name("Policy " + policyId)
+        .description("Description for " + policyId)
+        .version(version)
+        .createdAt(updatedAt.minusDays(1))
+        .updatedAt(updatedAt)
+        .startsAt(startsAt)
+        .expiresAt(expiresAt)
+        .minPrice(minPrice)
+        .maxPrice(maxPrice)
+        .category(category)
+        .authorizedRole(1)
+        .isValid(true)
+        .build();
   }
 }

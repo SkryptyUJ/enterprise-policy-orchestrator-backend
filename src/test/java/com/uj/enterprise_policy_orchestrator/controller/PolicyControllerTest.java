@@ -133,11 +133,11 @@ class PolicyControllerTest {
             "categoryId": 2,
             "name": "Hardware Policy",
             "description": "Equipment policy",
-             "startsAt": "2026-05-01",
+            "startsAt": "2026-05-01",
             "expiresAt": null,
             "minPrice": 500,
             "maxPrice": 10000,
-            "category": 2,
+            "category": "Equipment",
             "authorizedRole": 3
           }
           """;
@@ -150,7 +150,7 @@ class PolicyControllerTest {
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.authorUserId").value(5))
           .andExpect(jsonPath("$.policyId").value(200))
-          .andExpect(jsonPath("$.category").value(2));
+          .andExpect(jsonPath("$.category").value("Equipment"));
     }
   }
 
