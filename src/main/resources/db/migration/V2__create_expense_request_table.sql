@@ -1,6 +1,6 @@
 CREATE TABLE expense_request (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
     amount NUMERIC(19, 2) NOT NULL,
     category VARCHAR(100) NOT NULL,
     description TEXT,

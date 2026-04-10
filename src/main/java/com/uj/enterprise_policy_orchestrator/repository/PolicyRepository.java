@@ -4,6 +4,7 @@ import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,9 +12,16 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PolicyRepository extends JpaRepository<Policy, Long> {
+  Optional<Policy> findByName(String name);
+
+  Optional<Policy> findByVersion(Integer version);
+
+  List<Policy> findByPolicyId(String policyId);
+
   @Query(
       "SELECT p FROM Policy p "
-          + "WHERE p.category = :category "
+          + "WHERE p.isValid = true "
+          + "AND p.category = :category "
           + "AND p.startsAt <= :expenseDate "
           + "AND (p.expiresAt IS NULL OR p.expiresAt >= :expenseDate) "
           + "AND (p.minPrice IS NULL OR p.minPrice <= :amount) "

@@ -41,13 +41,13 @@ class ExpenseRequestServiceTest {
         "should create an expense request with given data and automatic submission timestamp")
     void shouldCreateExpenseRequestWithSubmittedAtTimestamp() {
       // given
-      Long userId = 1L;
+      String userId = "1";
 
       CreateExpenseRequestDto dto =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
               "Business travel",
-              "Business trip to Krakow – train tickets and hotel",
+              "Business trip to Krakow - train tickets and hotel",
               LocalDate.of(2026, 3, 20));
 
       when(policyService.findApplicablePolicies(any(), any(), any()))
@@ -71,7 +71,7 @@ class ExpenseRequestServiceTest {
       assertThat(result.amount()).isEqualByComparingTo("1500.00");
       assertThat(result.category()).isEqualTo("Business travel");
       assertThat(result.description())
-          .isEqualTo("Business trip to Krakow – train tickets and hotel");
+          .isEqualTo("Business trip to Krakow - train tickets and hotel");
       assertThat(result.expenseDate()).isEqualTo(LocalDate.of(2026, 3, 20));
       assertThat(result.status()).isEqualTo(ExpenseRequestStatus.WAITING_FOR_APPROVAL);
 
@@ -84,7 +84,7 @@ class ExpenseRequestServiceTest {
     @DisplayName("should persist the expense request in the database")
     void shouldPersistExpenseRequestInDatabase() {
       // given
-      Long userId = 1L;
+      String userId = "1";
 
       CreateExpenseRequestDto dto =
           new CreateExpenseRequestDto(
@@ -121,7 +121,8 @@ class ExpenseRequestServiceTest {
     @Test
     @DisplayName("should decline request when no applicable policies are found")
     void shouldDeclineWhenNoApplicablePoliciesFound() {
-      Long userId = 2L;
+      // given
+      String userId = "2";
 
       CreateExpenseRequestDto dto =
           new CreateExpenseRequestDto(
@@ -129,6 +130,7 @@ class ExpenseRequestServiceTest {
 
       when(policyService.findApplicablePolicies(any(), any(), any())).thenReturn(Set.of());
 
+      // when / then
       assertThatThrownBy(() -> expenseRequestService.createExpenseRequest(userId, dto))
           .isInstanceOf(NoApplicablePoliciesException.class)
           .hasMessage("Decline, no matching policies");

@@ -9,7 +9,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,10 +28,10 @@ public class Policy {
   private Long id;
 
   @Column(nullable = false)
-  private Long policyId;
+  private String policyId;
 
   @Column(nullable = false)
-  private Long authorUserId;
+  private String authorUserId;
 
   @Column(nullable = false)
   private Integer categoryId;
@@ -46,10 +46,10 @@ public class Policy {
   private Integer version;
 
   @Column(name = "created_at", nullable = false, updatable = false)
-  private LocalDateTime createdAt;
+  private LocalTime createdAt;
 
   @Column(name = "updated_at", nullable = false)
-  private LocalDateTime updatedAt;
+  private LocalTime updatedAt;
 
   @Column(name = "starts_at", nullable = false)
   private LocalDate startsAt;
@@ -74,8 +74,8 @@ public class Policy {
 
   @PrePersist
   protected void onCreate() {
-    createdAt = LocalDateTime.now();
-    updatedAt = LocalDateTime.now();
+    createdAt = LocalTime.now();
+    updatedAt = LocalTime.now();
     if (version == null) {
       version = 1;
     }
@@ -83,6 +83,6 @@ public class Policy {
 
   @PreUpdate
   protected void onUpdate() {
-    updatedAt = LocalDateTime.now();
+    updatedAt = LocalTime.now();
   }
 }

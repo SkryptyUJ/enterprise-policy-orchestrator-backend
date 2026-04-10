@@ -20,7 +20,7 @@ public class ExpenseRequestService {
   private final PolicyService policyService;
 
   @Transactional
-  public ExpenseRequestDto createExpenseRequest(Long userId, CreateExpenseRequestDto dto) {
+  public ExpenseRequestDto createExpenseRequest(String userId, CreateExpenseRequestDto dto) {
     ExpenseRequest request =
         ExpenseRequest.builder()
             .userId(userId)

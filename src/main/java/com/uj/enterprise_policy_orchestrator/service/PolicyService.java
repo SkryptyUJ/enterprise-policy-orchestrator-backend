@@ -26,7 +26,23 @@ public class PolicyService {
   private final PolicyRepository policyRepository;
 
   @Transactional
-  public PolicyDto createPolicy(Long authorUserId, CreatePolicyDto dto) {
+  public PolicyDto createPolicy(String authorUserId, CreatePolicyDto dto) {
+    Integer nextVersion = 1;
+    var existingPolicies = policyRepository.findByPolicyId(dto.policyId());
+
+    if (!existingPolicies.isEmpty()) {
+      LocalDate today = LocalDate.now();
+      var activePolicy = existingPolicies.stream().filter(p -> isActiveDuringDate(p, today)).findFirst();
+
+      if (activePolicy.isPresent()) {
+        Policy active = activePolicy.get();
+        active.setExpiresAt(dto.startsAt());
+        active.setIsValid(false);
+        policyRepository.save(active);
+        nextVersion = active.getVersion() + 1;
+      }
+    }
+
     Policy policy =
         Policy.builder()
             .policyId(dto.policyId())
@@ -40,6 +56,7 @@ public class PolicyService {
             .maxPrice(dto.maxPrice())
             .category(dto.category())
             .authorizedRole(dto.authorizedRole())
+            .version(nextVersion)
             .isValid(true)
             .build();
 
@@ -60,7 +77,7 @@ public class PolicyService {
     List<Policy> applicablePolicies =
         policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount);
 
-    Map<Long, Policy> latestByPolicyId =
+    Map<String, Policy> latestByPolicyId =
         applicablePolicies.stream()
             .collect(
                 Collectors.toMap(
@@ -89,5 +106,10 @@ public class PolicyService {
         entity.getCategory(),
         entity.getAuthorizedRole(),
         entity.getIsValid());
+  }
+
+  private boolean isActiveDuringDate(Policy policy, LocalDate date) {
+    LocalDate expiresAt = policy.getExpiresAt();
+    return !date.isBefore(policy.getStartsAt()) && (expiresAt == null || !date.isAfter(expiresAt));
   }
 }

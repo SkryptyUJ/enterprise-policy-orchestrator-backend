@@ -1,18 +1,18 @@
 package com.uj.enterprise_policy_orchestrator.dto;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public record PolicyDto(
     Long id,
-    Long policyId,
-    Long authorUserId,
+    String policyId,
+    String authorUserId,
     Integer categoryId,
     String name,
     String description,
     Integer version,
-    LocalDateTime createdAt,
-    LocalDateTime updatedAt,
+    LocalTime createdAt,
+    LocalTime updatedAt,
     LocalDate startsAt,
     LocalDate expiresAt,
     Integer minPrice,

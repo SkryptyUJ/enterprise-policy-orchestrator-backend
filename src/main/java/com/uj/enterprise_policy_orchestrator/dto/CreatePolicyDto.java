@@ -3,7 +3,7 @@ package com.uj.enterprise_policy_orchestrator.dto;
 import java.time.LocalDate;
 
 public record CreatePolicyDto(
-    Long policyId,
+    String policyId,
     Integer categoryId,
     String name,
     String description,

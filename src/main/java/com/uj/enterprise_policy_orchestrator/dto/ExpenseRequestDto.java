@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 public record ExpenseRequestDto(
     Long id,
-    Long userId,
+    String userId,
     BigDecimal amount,
     String category,
     String description,

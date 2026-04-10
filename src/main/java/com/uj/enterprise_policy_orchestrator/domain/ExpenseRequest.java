@@ -25,7 +25,7 @@ public class ExpenseRequest {
   private Long id;
 
   @Column(nullable = false)
-  private Long userId;
+  private String userId;
 
   @Column(nullable = false, precision = 19, scale = 2)
   private BigDecimal amount;
