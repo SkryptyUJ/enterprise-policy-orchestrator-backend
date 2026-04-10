@@ -3,8 +3,10 @@ package com.uj.enterprise_policy_orchestrator.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
@@ -45,28 +47,26 @@ class PolicyControllerTest {
     @Test
     @DisplayName("should return 201 CREATED with the new policy data")
     void shouldReturn201WithCreatedPolicy() throws Exception {
-      Long userId = 1L;
+      String userId = "1";
       LocalDateTime startsAt = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       LocalDateTime expiresAt = LocalDateTime.of(2027, 3, 31, 23, 59, 59);
 
       PolicyDto responseDto =
           new PolicyDto(
               100L,
-              100L,
+              "100",
               userId,
               1,
               "Travel Policy",
               "Company travel policy",
               1,
               LocalDateTime.now(),
-              LocalDateTime.now(),
               startsAt,
               expiresAt,
-              100,
-              5000,
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
               1,
-              2,
-              true);
+              2);
 
       when(policyService.createPolicy(eq(userId), any(CreatePolicyDto.class)))
           .thenReturn(responseDto);
@@ -74,7 +74,7 @@ class PolicyControllerTest {
       String requestJson =
           """
           {
-            "policyId": 100,
+            "policyId": "100",
             "categoryId": 1,
             "name": "Travel Policy",
             "description": "Company travel policy",
@@ -94,34 +94,31 @@ class PolicyControllerTest {
                   .content(requestJson))
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.id").value(100))
-          .andExpect(jsonPath("$.authorUserId").value(1))
-          .andExpect(jsonPath("$.name").value("Travel Policy"))
-          .andExpect(jsonPath("$.isValid").value(true));
+          .andExpect(jsonPath("$.authorUserId").value("1"))
+          .andExpect(jsonPath("$.name").value("Travel Policy"));
     }
 
     @Test
     @DisplayName("should delegate to service with correct parameters")
     void shouldDelegateToServiceWithCorrectParameters() throws Exception {
-      Long userId = 5L;
+      String userId = "5";
 
       PolicyDto responseDto =
           new PolicyDto(
               50L,
-              200L,
+              "200",
               userId,
               2,
               "Hardware Policy",
               "Equipment policy",
               1,
               LocalDateTime.now(),
-              LocalDateTime.now(),
               LocalDateTime.of(2026, 5, 1, 0, 0, 0),
               null,
-              500,
-              10000,
+              new java.math.BigInteger("500"),
+              new java.math.BigInteger("10000"),
               2,
-              3,
-              true);
+              3);
 
       when(policyService.createPolicy(eq(userId), any(CreatePolicyDto.class)))
           .thenReturn(responseDto);
@@ -148,8 +145,8 @@ class PolicyControllerTest {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(requestJson))
           .andExpect(status().isCreated())
-          .andExpect(jsonPath("$.authorUserId").value(5))
-          .andExpect(jsonPath("$.policyId").value(200))
+          .andExpect(jsonPath("$.authorUserId").value("5"))
+          .andExpect(jsonPath("$.policyId").value("200"))
           .andExpect(jsonPath("$.category").value(2));
     }
   }
@@ -167,21 +164,19 @@ class PolicyControllerTest {
       PolicyDto responseDto =
           new PolicyDto(
               policyId,
-              100L,
-              2L,
+              "100",
+              "2",
               1,
               "Test Policy",
               "Test Description",
               1,
               now,
-              now,
               now.plusDays(1),
               now.plusYears(1),
-              100,
-              5000,
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
               1,
-              2,
-              true);
+              2);
 
       when(policyService.getPolicyById(policyId)).thenReturn(responseDto);
 
@@ -189,8 +184,7 @@ class PolicyControllerTest {
           .perform(get("/api/users/{userId}/policies/{policyId}", 2L, policyId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.id").value(policyId))
-          .andExpect(jsonPath("$.name").value("Test Policy"))
-          .andExpect(jsonPath("$.isValid").value(true));
+          .andExpect(jsonPath("$.name").value("Test Policy"));
     }
   }
 

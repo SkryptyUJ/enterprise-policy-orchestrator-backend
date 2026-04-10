@@ -1,7 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.service;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.User;
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
@@ -21,12 +20,31 @@ public class PolicyService {
   private final UserRepository userRepository;
 
   @Transactional
-  public PolicyDto createPolicy(Long authorUserId, CreatePolicyDto dto) {
-    User author =
-        userRepository
-            .findById(authorUserId)
-            .orElseThrow(
-                () -> new EntityNotFoundException("User not found with id: " + authorUserId));
+  public PolicyDto createPolicy(String authorUserId, CreatePolicyDto dto) {
+    // @TODO
+    // User author =
+    // userRepository
+    // .findById(authorUserId)
+    // .orElseThrow(
+    // () -> new EntityNotFoundException("User not found with id: " +
+    // authorUserId));
+
+    // Find and invalidate the active policy with the same policyId
+    Integer nextVersion = 1;
+    var existingPolicies = policyRepository.findByPolicyId(dto.policyId());
+
+    if (!existingPolicies.isEmpty()) {
+      LocalDateTime now = LocalDateTime.now();
+      var activePolicy =
+          existingPolicies.stream().filter(p -> isActiveDuringDate(p, now)).findFirst();
+
+      if (activePolicy.isPresent()) {
+        Policy active = activePolicy.get();
+        active.setExpiresAt(dto.startsAt());
+        policyRepository.save(active);
+        nextVersion = active.getVersion() + 1;
+      }
+    }
 
     Policy policy =
         Policy.builder()
@@ -41,7 +59,7 @@ public class PolicyService {
             .maxPrice(dto.maxPrice())
             .category(dto.category())
             .authorizedRole(dto.authorizedRole())
-            .isValid(true)
+            .version(nextVersion)
             .build();
 
     Policy saved = policyRepository.save(policy);
@@ -88,13 +106,16 @@ public class PolicyService {
         entity.getDescription(),
         entity.getVersion(),
         entity.getCreatedAt(),
-        entity.getUpdatedAt(),
         entity.getStartsAt(),
         entity.getExpiresAt(),
         entity.getMinPrice(),
         entity.getMaxPrice(),
         entity.getCategory(),
-        entity.getAuthorizedRole(),
-        entity.getIsValid());
+        entity.getAuthorizedRole());
+  }
+
+  private boolean isActiveDuringDate(Policy policy, LocalDateTime date) {
+    LocalDateTime expiresAt = policy.getExpiresAt();
+    return date.isAfter(policy.getStartsAt()) && (expiresAt == null || date.isBefore(expiresAt));
   }
 }
