@@ -50,7 +50,7 @@ public class Policy {
   @Column(name = "starts_at", nullable = false, updatable = false)
   private LocalDateTime startsAt;
 
-  @Column(name = "expires_at", nullable = true, updatable = false)
+  @Column(name = "expires_at", nullable = true)
   private LocalDateTime expiresAt;
 
   @Column(nullable = true, updatable = false)
@@ -62,7 +62,7 @@ public class Policy {
   @Column(nullable = false, updatable = false)
   private Integer category;
 
-  @Column(nullable = false, updatable = false)
+  @Column(nullable = true, updatable = false)
   private Integer authorizedRole; /* @todo enum and strict definitions */
 
   @PrePersist

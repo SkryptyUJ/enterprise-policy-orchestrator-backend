@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.User;
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
@@ -41,7 +40,8 @@ class PolicyServiceTest {
     @DisplayName("should create a policy with given data and automatic timestamps")
     void shouldCreatePolicyWithTimestamps() {
       Long userId = 1L;
-      User author = User.builder().id(userId).username("admin.user").build();
+      // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
+      // User author = User.builder().id(userId).username("admin.user").build();
 
       LocalDateTime startsAt = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       LocalDateTime expiresAt = LocalDateTime.of(2027, 3, 31, 23, 59, 59);
@@ -59,7 +59,8 @@ class PolicyServiceTest {
               1,
               2);
 
-      when(userRepository.findById(userId)).thenReturn(Optional.of(author));
+      // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
+      // when(userRepository.findById(userId)).thenReturn(Optional.of(author));
       when(policyRepository.save(any(Policy.class)))
           .thenAnswer(
               invocation -> {
@@ -80,7 +81,8 @@ class PolicyServiceTest {
     @DisplayName("should persist the policy in the database")
     void shouldPersistPolicyInDatabase() {
       Long userId = 2L;
-      User author = User.builder().id(userId).username("policy.creator").build();
+      // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
+      // User author = User.builder().id(userId).username("policy.creator").build();
       LocalDateTime startsAt = LocalDateTime.of(2026, 5, 1, 0, 0, 0);
 
       CreatePolicyDto dto =
@@ -96,7 +98,8 @@ class PolicyServiceTest {
               2,
               3);
 
-      when(userRepository.findById(userId)).thenReturn(Optional.of(author));
+      // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
+      // when(userRepository.findById(userId)).thenReturn(Optional.of(author));
       when(policyRepository.save(any(Policy.class)))
           .thenAnswer(
               invocation -> {
@@ -117,30 +120,30 @@ class PolicyServiceTest {
       assertThat(saved.getCategory()).isEqualTo(2);
     }
 
-    @Test
-    @DisplayName("should throw exception when the user does not exist")
-    void shouldThrowWhenUserNotFound() {
-      Long nonExistentUserId = 999L;
-      LocalDateTime startsAt = LocalDateTime.of(2026, 6, 1, 0, 0, 0);
-      CreatePolicyDto dto =
-          new CreatePolicyDto(
-              "300",
-              1,
-              "Test Policy",
-              "Test",
-              startsAt,
-              null,
-              new java.math.BigInteger("0"),
-              new java.math.BigInteger("1000"),
-              1,
-              1);
-
-      when(userRepository.findById(nonExistentUserId)).thenReturn(Optional.empty());
-
-      assertThatThrownBy(() -> policyService.createPolicy(nonExistentUserId, dto))
-          .isInstanceOf(EntityNotFoundException.class)
-          .hasMessageContaining("999");
-    }
+    // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
+    // @Test
+    // @DisplayName("should throw exception when the user does not exist")
+    // void shouldThrowWhenUserNotFound() {
+    // Long nonExistentUserId = 999L;
+    // LocalDateTime startsAt = LocalDateTime.of(2026, 6, 1, 0, 0, 0);
+    // CreatePolicyDto dto = new CreatePolicyDto(
+    // "300",
+    // 1,
+    // "Test Policy",
+    // "Test",
+    // startsAt,
+    // null,
+    // new java.math.BigInteger("0"),
+    // new java.math.BigInteger("1000"),
+    // 1,
+    // 1);
+    //
+    // when(userRepository.findById(nonExistentUserId)).thenReturn(Optional.empty());
+    //
+    // assertThatThrownBy(() -> policyService.createPolicy(nonExistentUserId, dto))
+    // .isInstanceOf(EntityNotFoundException.class)
+    // .hasMessageContaining("999");
+    // }
   }
 
   @Nested

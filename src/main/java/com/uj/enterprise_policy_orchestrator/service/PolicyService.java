@@ -1,7 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.service;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.User;
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
@@ -21,11 +20,13 @@ public class PolicyService {
 
   @Transactional
   public PolicyDto createPolicy(Long authorUserId, CreatePolicyDto dto) {
-    User author =
-        userRepository
-            .findById(authorUserId)
-            .orElseThrow(
-                () -> new EntityNotFoundException("User not found with id: " + authorUserId));
+    // @TODO
+    // User author =
+    // userRepository
+    // .findById(authorUserId)
+    // .orElseThrow(
+    // () -> new EntityNotFoundException("User not found with id: " +
+    // authorUserId));
 
     // Find and invalidate the active policy with the same policyId
     Integer nextVersion = 1;
