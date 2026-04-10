@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -202,21 +203,19 @@ class PolicyControllerTest {
       PolicyDto responseDto =
           new PolicyDto(
               policyId,
-              100L,
-              1L,
+              "100",
+              "1",
               1,
               "Active Policy",
               "Policy with new end date",
               1,
               now,
-              now,
               now.minusDays(30),
               expiresAt,
-              100,
-              5000,
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
               1,
-              2,
-              true);
+              2);
 
       when(policyService.setExpiration(eq(policyId), any(LocalDateTime.class)))
           .thenReturn(responseDto);
@@ -251,12 +250,14 @@ class PolicyControllerTest {
 
       PolicyDto activePolicy =
           new PolicyDto(
-              1L, 100L, 1L, 1, "Active Policy", "Active", 1, now, now,
-              now.minusDays(10), null, 100, 5000, 1, 2, true);
+              1L, "100", "1", 1, "Active Policy", "Active", 1, now,
+              now.minusDays(10), null, new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"), 1, 2);
       PolicyDto expiredPolicy =
           new PolicyDto(
-              2L, 200L, 1L, 1, "Expired Policy", "Expired", 1, now, now,
-              now.minusYears(2), now.minusDays(1), 100, 5000, 1, 2, true);
+              2L, "200", "1", 1, "Expired Policy", "Expired", 1, now,
+              now.minusYears(2), now.minusDays(1), new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"), 1, 2);
 
       when(policyService.getAllPolicies()).thenReturn(List.of(activePolicy, expiredPolicy));
 

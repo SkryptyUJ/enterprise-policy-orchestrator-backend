@@ -187,20 +187,18 @@ class ExpenseRequestServiceTest {
       Policy activePolicy =
           Policy.builder()
               .id(1L)
-              .policyId(100L)
-              .authorUserId(1L)
+              .policyId("100")
+              .authorUserId("1")
               .categoryId(1)
               .name("Active Travel Policy")
               .version(1)
               .createdAt(now.minusDays(30))
-              .updatedAt(now.minusDays(30))
               .startsAt(now.minusDays(30))
               .expiresAt(null)
-              .minPrice(100)
-              .maxPrice(5000)
+              .minPrice(new java.math.BigInteger("100"))
+              .maxPrice(new java.math.BigInteger("5000"))
               .category(1)
               .authorizedRole(2)
-              .isValid(true)
               .build();
 
       CreateExpenseRequestDto dto =
