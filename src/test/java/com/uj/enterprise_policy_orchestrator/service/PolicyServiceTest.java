@@ -39,7 +39,7 @@ class PolicyServiceTest {
     @Test
     @DisplayName("should create a policy with given data and automatic timestamps")
     void shouldCreatePolicyWithTimestamps() {
-      Long userId = 1L;
+      String userId = "1";
       // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
       // User author = User.builder().id(userId).username("admin.user").build();
 
@@ -80,7 +80,7 @@ class PolicyServiceTest {
     @Test
     @DisplayName("should persist the policy in the database")
     void shouldPersistPolicyInDatabase() {
-      Long userId = 2L;
+      String userId = "2";
       // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
       // User author = User.builder().id(userId).username("policy.creator").build();
       LocalDateTime startsAt = LocalDateTime.of(2026, 5, 1, 0, 0, 0);
@@ -159,7 +159,7 @@ class PolicyServiceTest {
           Policy.builder()
               .id(policyId)
               .policyId("100")
-              .authorUserId(5L)
+              .authorUserId("5")
               .categoryId(1)
               .name("Test Policy")
               .description("Test Description")

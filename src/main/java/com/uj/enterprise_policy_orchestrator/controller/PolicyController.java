@@ -22,7 +22,7 @@ public class PolicyController {
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public PolicyDto createPolicy(@PathVariable Long userId, @RequestBody CreatePolicyDto dto) {
+  public PolicyDto createPolicy(@PathVariable String userId, @RequestBody CreatePolicyDto dto) {
     return policyService.createPolicy(userId, dto);
   }
 

@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 public record PolicyDto(
     Long id,
     String policyId,
-    Long authorUserId,
+    String authorUserId,
     Integer categoryId,
     String name,
     String description,

@@ -30,7 +30,7 @@ public class Policy {
   private String policyId;
 
   @Column(nullable = false, updatable = false)
-  private Long authorUserId;
+  private String authorUserId;
 
   @Column(nullable = false, updatable = false)
   private Integer categoryId;

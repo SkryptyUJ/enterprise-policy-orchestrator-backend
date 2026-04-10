@@ -19,7 +19,7 @@ public class PolicyService {
   private final UserRepository userRepository;
 
   @Transactional
-  public PolicyDto createPolicy(Long authorUserId, CreatePolicyDto dto) {
+  public PolicyDto createPolicy(String authorUserId, CreatePolicyDto dto) {
     // @TODO
     // User author =
     // userRepository

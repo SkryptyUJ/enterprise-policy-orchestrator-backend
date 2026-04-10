@@ -46,7 +46,7 @@ class PolicyControllerTest {
     @Test
     @DisplayName("should return 201 CREATED with the new policy data")
     void shouldReturn201WithCreatedPolicy() throws Exception {
-      Long userId = 1L;
+      String userId = "1";
       LocalDateTime startsAt = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       LocalDateTime expiresAt = LocalDateTime.of(2027, 3, 31, 23, 59, 59);
 
@@ -93,14 +93,14 @@ class PolicyControllerTest {
                   .content(requestJson))
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.id").value(100))
-          .andExpect(jsonPath("$.authorUserId").value(1))
+          .andExpect(jsonPath("$.authorUserId").value("1"))
           .andExpect(jsonPath("$.name").value("Travel Policy"));
     }
 
     @Test
     @DisplayName("should delegate to service with correct parameters")
     void shouldDelegateToServiceWithCorrectParameters() throws Exception {
-      Long userId = 5L;
+      String userId = "5";
 
       PolicyDto responseDto =
           new PolicyDto(
@@ -144,7 +144,7 @@ class PolicyControllerTest {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(requestJson))
           .andExpect(status().isCreated())
-          .andExpect(jsonPath("$.authorUserId").value(5))
+          .andExpect(jsonPath("$.authorUserId").value("5"))
           .andExpect(jsonPath("$.policyId").value("200"))
           .andExpect(jsonPath("$.category").value(2));
     }
@@ -164,7 +164,7 @@ class PolicyControllerTest {
           new PolicyDto(
               policyId,
               "100",
-              2L,
+              "2",
               1,
               "Test Policy",
               "Test Description",
