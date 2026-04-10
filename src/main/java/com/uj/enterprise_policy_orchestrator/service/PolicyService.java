@@ -7,6 +7,8 @@ import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,28 @@ public class PolicyService {
             .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Policy not found with id: " + id));
     return toDto(policy);
+  }
+
+  @Transactional
+  public PolicyDto setExpiration(Long policyId, LocalDateTime expiresAt) {
+    Policy policy =
+        policyRepository
+            .findById(policyId)
+            .orElseThrow(
+                () -> new EntityNotFoundException("Policy not found with id: " + policyId));
+    policy.setExpiresAt(expiresAt);
+    Policy saved = policyRepository.save(policy);
+    return toDto(saved);
+  }
+
+  public List<PolicyDto> getAllPolicies() {
+    return policyRepository.findAll().stream().map(this::toDto).toList();
+  }
+
+  public List<PolicyDto> getActivePolicies() {
+    return policyRepository.findActivePolicies(LocalDateTime.now()).stream()
+        .map(this::toDto)
+        .toList();
   }
 
   private PolicyDto toDto(Policy entity) {

@@ -10,6 +10,7 @@ import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.service.PolicyService;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -190,6 +191,87 @@ class PolicyControllerTest {
           .andExpect(jsonPath("$.id").value(policyId))
           .andExpect(jsonPath("$.name").value("Test Policy"))
           .andExpect(jsonPath("$.isValid").value(true));
+    }
+  }
+
+  @Nested
+  @DisplayName("PATCH /api/users/{userId}/policies/{policyId}/expiration")
+  class SetExpirationEndpoint {
+
+    @Test
+    @DisplayName("should return 200 OK with updated policy containing expiration date")
+    void shouldReturn200WithUpdatedPolicy() throws Exception {
+      Long policyId = 1L;
+      LocalDateTime now = LocalDateTime.now();
+      LocalDateTime expiresAt = LocalDateTime.of(2027, 6, 30, 23, 59, 59);
+
+      PolicyDto responseDto =
+          new PolicyDto(
+              policyId,
+              100L,
+              1L,
+              1,
+              "Active Policy",
+              "Policy with new end date",
+              1,
+              now,
+              now,
+              now.minusDays(30),
+              expiresAt,
+              100,
+              5000,
+              1,
+              2,
+              true);
+
+      when(policyService.setExpiration(eq(policyId), any(LocalDateTime.class)))
+          .thenReturn(responseDto);
+
+      String requestJson =
+          """
+          {
+            "expiresAt": "2027-06-30T23:59:59"
+          }
+          """;
+
+      mockMvc
+          .perform(
+              patch("/api/users/{userId}/policies/{policyId}/expiration", 1L, policyId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(requestJson))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(policyId))
+          .andExpect(jsonPath("$.expiresAt").exists())
+          .andExpect(jsonPath("$.name").value("Active Policy"));
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/users/{userId}/policies")
+  class GetAllPoliciesEndpoint {
+
+    @Test
+    @DisplayName("should return 200 OK with all policies including deactivated ones")
+    void shouldReturn200WithAllPolicies() throws Exception {
+      LocalDateTime now = LocalDateTime.now();
+
+      PolicyDto activePolicy =
+          new PolicyDto(
+              1L, 100L, 1L, 1, "Active Policy", "Active", 1, now, now,
+              now.minusDays(10), null, 100, 5000, 1, 2, true);
+      PolicyDto expiredPolicy =
+          new PolicyDto(
+              2L, 200L, 1L, 1, "Expired Policy", "Expired", 1, now, now,
+              now.minusYears(2), now.minusDays(1), 100, 5000, 1, 2, true);
+
+      when(policyService.getAllPolicies()).thenReturn(List.of(activePolicy, expiredPolicy));
+
+      mockMvc
+          .perform(get("/api/users/{userId}/policies", 1L))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.length()").value(2))
+          .andExpect(jsonPath("$[0].name").value("Active Policy"))
+          .andExpect(jsonPath("$[1].name").value("Expired Policy"));
     }
   }
 }

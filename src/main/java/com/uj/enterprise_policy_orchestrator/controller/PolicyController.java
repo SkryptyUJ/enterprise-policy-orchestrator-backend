@@ -2,7 +2,9 @@ package com.uj.enterprise_policy_orchestrator.controller;
 
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
+import com.uj.enterprise_policy_orchestrator.dto.SetPolicyExpirationDto;
 import com.uj.enterprise_policy_orchestrator.service.PolicyService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -24,5 +26,18 @@ public class PolicyController {
   @ResponseStatus(HttpStatus.OK)
   public PolicyDto getPolicyById(@PathVariable Long policyId) {
     return policyService.getPolicyById(policyId);
+  }
+
+  @PatchMapping("/{policyId}/expiration")
+  @ResponseStatus(HttpStatus.OK)
+  public PolicyDto setExpiration(
+      @PathVariable Long policyId, @RequestBody SetPolicyExpirationDto dto) {
+    return policyService.setExpiration(policyId, dto.expiresAt());
+  }
+
+  @GetMapping
+  @ResponseStatus(HttpStatus.OK)
+  public List<PolicyDto> getAllPolicies() {
+    return policyService.getAllPolicies();
   }
 }
