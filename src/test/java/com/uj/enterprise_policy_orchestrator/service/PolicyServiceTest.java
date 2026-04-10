@@ -14,6 +14,7 @@ import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -48,7 +49,7 @@ class PolicyServiceTest {
 
       CreatePolicyDto dto =
           new CreatePolicyDto(
-              "100",
+              Optional.of("100"),
               1,
               "Travel Policy",
               "Company travel expense policy",
@@ -87,7 +88,7 @@ class PolicyServiceTest {
 
       CreatePolicyDto dto =
           new CreatePolicyDto(
-              "200",
+              Optional.of("200"),
               2,
               "Hardware Policy",
               "Computer equipment policy",
@@ -151,14 +152,14 @@ class PolicyServiceTest {
   class GetPolicy {
 
     @Test
-    @DisplayName("should retrieve policy by id")
-    void shouldRetrievePolicyById() {
-      Long policyId = 1L;
+    @DisplayName("should retrieve policy by policyId")
+    void shouldRetrievePolicyByPolicyId() {
+      String policyId = "POL-100";
       LocalDateTime now = LocalDateTime.now();
       Policy policy =
           Policy.builder()
-              .id(policyId)
-              .policyId("100")
+              .id(1L)
+              .policyId(policyId)
               .authorUserId("5")
               .categoryId(1)
               .name("Test Policy")
@@ -173,23 +174,94 @@ class PolicyServiceTest {
               .authorizedRole(2)
               .build();
 
-      when(policyRepository.findById(policyId)).thenReturn(Optional.of(policy));
+      when(policyRepository.findFirstByPolicyIdOrderByVersionDesc(policyId))
+          .thenReturn(Optional.of(policy));
 
-      PolicyDto result = policyService.getPolicyById(policyId);
+      PolicyDto result = policyService.getPolicyByPolicyId(policyId);
 
-      assertThat(result.id()).isEqualTo(policyId);
+      assertThat(result.policyId()).isEqualTo(policyId);
       assertThat(result.name()).isEqualTo("Test Policy");
     }
 
     @Test
     @DisplayName("should throw exception when policy not found")
     void shouldThrowWhenPolicyNotFound() {
-      Long nonExistentPolicyId = 999L;
-      when(policyRepository.findById(nonExistentPolicyId)).thenReturn(Optional.empty());
+      String missingPolicyId = "MISSING";
+      when(policyRepository.findFirstByPolicyIdOrderByVersionDesc(missingPolicyId))
+          .thenReturn(Optional.empty());
 
-      assertThatThrownBy(() -> policyService.getPolicyById(nonExistentPolicyId))
+      assertThatThrownBy(() -> policyService.getPolicyByPolicyId(missingPolicyId))
           .isInstanceOf(EntityNotFoundException.class)
-          .hasMessageContaining("999");
+          .hasMessageContaining("MISSING");
+    }
+  }
+
+
+  @Nested
+  @DisplayName("Scenario 4: User retrieves policy history")
+  class GetPolicyHistory {
+
+    @Test
+    @DisplayName("should return policy history by policyId")
+    void shouldReturnPolicyHistory() {
+      String policyId = "ABC-123";
+      LocalDateTime now = LocalDateTime.now();
+
+      Policy v2 =
+          Policy.builder()
+              .id(2L)
+              .policyId(policyId)
+              .authorUserId("5")
+              .categoryId(1)
+              .name("Policy v2")
+              .description("Updated")
+              .version(2)
+              .createdAt(now)
+              .startsAt(now.plusDays(1))
+              .expiresAt(null)
+              .minPrice(new java.math.BigInteger("100"))
+              .maxPrice(new java.math.BigInteger("5000"))
+              .category(1)
+              .authorizedRole(2)
+              .build();
+
+      Policy v1 =
+          Policy.builder()
+              .id(1L)
+              .policyId(policyId)
+              .authorUserId("5")
+              .categoryId(1)
+              .name("Policy v1")
+              .description("Initial")
+              .version(1)
+              .createdAt(now.minusDays(1))
+              .startsAt(now.minusDays(1))
+              .expiresAt(now.plusDays(1))
+              .minPrice(new java.math.BigInteger("100"))
+              .maxPrice(new java.math.BigInteger("5000"))
+              .category(1)
+              .authorizedRole(2)
+              .build();
+
+      when(policyRepository.findByPolicyIdOrderByVersionDesc(policyId))
+          .thenReturn(List.of(v2, v1));
+
+      List<PolicyDto> result = policyService.getPolicyHistory(policyId);
+
+      assertThat(result).hasSize(2);
+      assertThat(result.get(0).version()).isEqualTo(2);
+      assertThat(result.get(1).version()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("should throw exception when history is empty")
+    void shouldThrowWhenHistoryEmpty() {
+      String policyId = "MISSING";
+      when(policyRepository.findByPolicyIdOrderByVersionDesc(policyId)).thenReturn(List.of());
+
+      assertThatThrownBy(() -> policyService.getPolicyHistory(policyId))
+          .isInstanceOf(EntityNotFoundException.class)
+          .hasMessageContaining(policyId);
     }
   }
 }

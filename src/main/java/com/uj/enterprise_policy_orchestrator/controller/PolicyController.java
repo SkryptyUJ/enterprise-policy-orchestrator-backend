@@ -3,6 +3,7 @@ package com.uj.enterprise_policy_orchestrator.controller;
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.service.PolicyService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,9 +27,15 @@ public class PolicyController {
     return policyService.createPolicy(userId, dto);
   }
 
+  @GetMapping("/{policyId}/history")
+  @ResponseStatus(HttpStatus.OK)
+  public List<PolicyDto> getPolicyHistory(@PathVariable String policyId) {
+    return policyService.getPolicyHistory(policyId);
+  }
+
   @GetMapping("/{policyId}")
   @ResponseStatus(HttpStatus.OK)
-  public PolicyDto getPolicyById(@PathVariable Long policyId) {
-    return policyService.getPolicyById(policyId);
+  public PolicyDto getPolicyById(@PathVariable String policyId) {
+    return policyService.getPolicyByPolicyId(policyId);
   }
 }

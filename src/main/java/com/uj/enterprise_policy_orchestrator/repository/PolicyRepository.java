@@ -13,4 +13,8 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
   Optional<Policy> findByVersion(Integer version);
 
   List<Policy> findByPolicyId(String policyId);
+
+  List<Policy> findByPolicyIdOrderByVersionDesc(String policyId);
+
+  Optional<Policy> findFirstByPolicyIdOrderByVersionDesc(String policyId);
 }
