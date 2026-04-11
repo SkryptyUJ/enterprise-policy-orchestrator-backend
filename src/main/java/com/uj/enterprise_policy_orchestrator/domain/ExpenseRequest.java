@@ -39,7 +39,7 @@ public class ExpenseRequest {
   @Column(name = "expense_date", nullable = false)
   private LocalDate expenseDate;
 
-  @Column(name = "submitted_at", nullable = false)
+  @Column(name = "submitted_at", nullable = false, updatable = false)
   private LocalDateTime submittedAt;
 
   @Enumerated(EnumType.STRING)
