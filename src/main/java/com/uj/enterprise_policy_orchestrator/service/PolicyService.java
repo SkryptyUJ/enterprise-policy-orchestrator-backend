@@ -8,6 +8,8 @@ import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +31,11 @@ public class PolicyService {
     // () -> new EntityNotFoundException("User not found with id: " +
     // authorUserId));
 
+    String policyId = dto.policyId().orElse(UUID.randomUUID().toString());
+
     // Find and invalidate the active policy with the same policyId
     Integer nextVersion = 1;
-    var existingPolicies = policyRepository.findByPolicyId(dto.policyId());
+    var existingPolicies = policyRepository.findByPolicyId(policyId);
 
     if (!existingPolicies.isEmpty()) {
       LocalDateTime now = LocalDateTime.now();
@@ -48,7 +52,7 @@ public class PolicyService {
 
     Policy policy =
         Policy.builder()
-            .policyId(dto.policyId())
+            .policyId(policyId)
             .authorUserId(authorUserId)
             .categoryId(dto.categoryId())
             .name(dto.name())
@@ -74,6 +78,25 @@ public class PolicyService {
     return toDto(policy);
   }
 
+  public PolicyDto getPolicyByPolicyId(String policyId) {
+    Policy policy =
+        policyRepository
+            .findFirstByPolicyIdOrderByVersionDesc(policyId)
+            .orElseThrow(
+                () -> new EntityNotFoundException("Policy not found with policyId: " + policyId));
+    return toDto(policy);
+  }
+
+  public List<PolicyDto> getPolicyHistory(String policyId) {
+    List<Policy> history = policyRepository.findByPolicyIdOrderByVersionDesc(policyId);
+
+    if (history.isEmpty()) {
+      throw new EntityNotFoundException("Policy not found with policyId: " + policyId);
+    }
+
+    return history.stream().map(this::toDto).collect(Collectors.toList());
+  }
+  
   @Transactional
   public PolicyDto setExpiration(Long policyId, LocalDateTime expiresAt) {
     Policy policy =

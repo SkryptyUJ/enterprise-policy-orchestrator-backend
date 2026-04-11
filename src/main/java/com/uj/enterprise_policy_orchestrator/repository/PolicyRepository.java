@@ -16,6 +16,10 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
   Optional<Policy> findByVersion(Integer version);
 
   List<Policy> findByPolicyId(String policyId);
+
+  List<Policy> findByPolicyIdOrderByVersionDesc(String policyId);
+
+  Optional<Policy> findFirstByPolicyIdOrderByVersionDesc(String policyId);
   @Query(
       "SELECT p FROM Policy p WHERE p.startsAt <= :now"
           + " AND (p.expiresAt IS NULL OR p.expiresAt > :now)")

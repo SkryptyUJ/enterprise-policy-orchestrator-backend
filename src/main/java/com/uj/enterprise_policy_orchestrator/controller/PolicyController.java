@@ -29,10 +29,16 @@ public class PolicyController {
     return policyService.createPolicy(userId, dto);
   }
 
+  @GetMapping("/{policyId}/history")
+  @ResponseStatus(HttpStatus.OK)
+  public List<PolicyDto> getPolicyHistory(@PathVariable String policyId) {
+    return policyService.getPolicyHistory(policyId);
+  }
+
   @GetMapping("/{policyId}")
   @ResponseStatus(HttpStatus.OK)
-  public PolicyDto getPolicyById(@PathVariable Long policyId) {
-    return policyService.getPolicyById(policyId);
+  public PolicyDto getPolicyById(@PathVariable String policyId) {
+    return policyService.getPolicyByPolicyId(policyId);
   }
 
   @PatchMapping("/{policyId}/expiration")

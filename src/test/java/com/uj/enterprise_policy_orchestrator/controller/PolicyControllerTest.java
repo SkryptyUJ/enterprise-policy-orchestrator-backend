@@ -159,13 +159,13 @@ class PolicyControllerTest {
     @Test
     @DisplayName("should return 200 OK with policy data")
     void shouldReturn200WithPolicyData() throws Exception {
-      Long policyId = 1L;
+      String policyId = "POL-100";
       LocalDateTime now = LocalDateTime.now();
 
       PolicyDto responseDto =
           new PolicyDto(
+              1L,
               policyId,
-              "100",
               "2",
               1,
               "Test Policy",
@@ -179,12 +179,12 @@ class PolicyControllerTest {
               1,
               2);
 
-      when(policyService.getPolicyById(policyId)).thenReturn(responseDto);
+      when(policyService.getPolicyByPolicyId(policyId)).thenReturn(responseDto);
 
       mockMvc
           .perform(get("/api/users/{userId}/policies/{policyId}", 2L, policyId))
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$.id").value(policyId))
+          .andExpect(jsonPath("$.policyId").value(policyId))
           .andExpect(jsonPath("$.name").value("Test Policy"));
     }
   }
@@ -267,6 +267,60 @@ class PolicyControllerTest {
           .andExpect(jsonPath("$.length()").value(2))
           .andExpect(jsonPath("$[0].name").value("Active Policy"))
           .andExpect(jsonPath("$[1].name").value("Expired Policy"));
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/users/{userId}/policies/{policyId}/history")
+  class GetPolicyHistoryEndpoint {
+
+    @Test
+    @DisplayName("should return policy history by policyId")
+    void shouldReturnPolicyHistory() throws Exception {
+      String policyId = "ABC-123";
+      LocalDateTime now = LocalDateTime.now();
+
+      PolicyDto v2 =
+          new PolicyDto(
+              200L,
+              policyId,
+              "2",
+              1,
+              "Policy v2",
+              "Updated",
+              2,
+              now,
+              now.plusDays(1),
+              null,
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
+              1,
+              2);
+
+      PolicyDto v1 =
+          new PolicyDto(
+              100L,
+              policyId,
+              "2",
+              1,
+              "Policy v1",
+              "Initial",
+              1,
+              now.minusDays(1),
+              now.minusDays(1),
+              now.plusDays(1),
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
+              1,
+              2);
+
+      when(policyService.getPolicyHistory(policyId)).thenReturn(List.of(v2, v1));
+
+      mockMvc
+          .perform(get("/api/users/{userId}/policies/{policyId}/history", 2L, policyId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$[0].version").value(2))
+          .andExpect(jsonPath("$[1].version").value(1));
     }
   }
 }
