@@ -4,11 +4,13 @@ import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
-import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,22 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class PolicyService {
 
   private final PolicyRepository policyRepository;
-  private final UserRepository userRepository;
 
   @Transactional
   public PolicyDto createPolicy(String authorUserId, CreatePolicyDto dto) {
-    // @TODO
-    // User author =
-    // userRepository
-    // .findById(authorUserId)
-    // .orElseThrow(
-    // () -> new EntityNotFoundException("User not found with id: " +
-    // authorUserId));
-
     String policyId = dto.policyId().orElse(UUID.randomUUID().toString());
 
     // Find and invalidate the active policy with the same policyId
-    Integer nextVersion = 1;
+    int nextVersion = 1;
     var existingPolicies = policyRepository.findByPolicyId(policyId);
 
     if (!existingPolicies.isEmpty()) {
@@ -57,6 +50,7 @@ public class PolicyService {
             .categoryId(dto.categoryId())
             .name(dto.name())
             .description(dto.description())
+            .updatedAt(LocalDateTime.now())
             .startsAt(dto.startsAt())
             .expiresAt(dto.expiresAt())
             .minPrice(dto.minPrice())
@@ -68,14 +62,6 @@ public class PolicyService {
 
     Policy saved = policyRepository.save(policy);
     return toDto(saved);
-  }
-
-  public PolicyDto getPolicyById(Long id) {
-    Policy policy =
-        policyRepository
-            .findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Policy not found with id: " + id));
-    return toDto(policy);
   }
 
   public PolicyDto getPolicyByPolicyId(String policyId) {
@@ -97,6 +83,22 @@ public class PolicyService {
     return history.stream().map(this::toDto).collect(Collectors.toList());
   }
 
+  public Set<Policy> findApplicablePolicies(
+      String category, LocalDate expenseDate, BigDecimal amount) {
+    List<Policy> applicablePolicies =
+        policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount);
+
+    Map<String, Policy> latestByPolicyId =
+        applicablePolicies.stream()
+            .collect(
+                Collectors.toMap(
+                    Policy::getPolicyId,
+                    Function.identity(),
+                    BinaryOperator.maxBy(Comparator.comparing(Policy::getUpdatedAt))));
+
+    return new HashSet<>(latestByPolicyId.values());
+  }
+
   private PolicyDto toDto(Policy entity) {
     return new PolicyDto(
         entity.getId(),
@@ -106,6 +108,7 @@ public class PolicyService {
         entity.getName(),
         entity.getDescription(),
         entity.getVersion(),
+        entity.getUpdatedAt(),
         entity.getCreatedAt(),
         entity.getStartsAt(),
         entity.getExpiresAt(),

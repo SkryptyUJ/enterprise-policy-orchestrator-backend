@@ -8,6 +8,7 @@ CREATE TABLE policy (
     description TEXT,
     version INT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     starts_at TIMESTAMP NOT NULL,
     expires_at TIMESTAMP,
     min_price NUMERIC(38,0),
