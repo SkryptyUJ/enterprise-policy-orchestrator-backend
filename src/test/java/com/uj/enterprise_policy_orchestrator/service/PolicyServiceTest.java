@@ -264,4 +264,107 @@ class PolicyServiceTest {
           .hasMessageContaining(policyId);
     }
   }
+
+  @Nested
+  @DisplayName("Scenario 3: Setting end date on an active policy")
+  class SetExpiration {
+
+    @Test
+    @DisplayName("should update the policy with the given expiration date")
+    void shouldUpdatePolicyWithExpirationDate() {
+      Long policyId = 1L;
+      LocalDateTime now = LocalDateTime.now();
+      LocalDateTime expiresAt = now.plusMonths(6);
+
+      Policy policy =
+          Policy.builder()
+              .id(policyId)
+              .policyId("100")
+              .authorUserId("1")
+              .categoryId(1)
+              .name("Active Policy")
+              .description("Policy without end date")
+              .version(1)
+              .createdAt(now.minusDays(30))
+              .startsAt(now.minusDays(30))
+              .expiresAt(null)
+              .minPrice(new java.math.BigInteger("100"))
+              .maxPrice(new java.math.BigInteger("5000"))
+              .category(1)
+              .authorizedRole(2)
+              .build();
+
+      when(policyRepository.findById(policyId)).thenReturn(Optional.of(policy));
+      when(policyRepository.save(any(Policy.class)))
+          .thenAnswer(invocation -> invocation.getArgument(0));
+
+      PolicyDto result = policyService.setExpiration(policyId, expiresAt);
+
+      assertThat(result.expiresAt()).isEqualTo(expiresAt);
+
+      ArgumentCaptor<Policy> captor = ArgumentCaptor.forClass(Policy.class);
+      verify(policyRepository).save(captor.capture());
+      assertThat(captor.getValue().getExpiresAt()).isEqualTo(expiresAt);
+    }
+
+    @Test
+    @DisplayName("should throw exception when policy not found")
+    void shouldThrowWhenPolicyNotFound() {
+      Long nonExistentPolicyId = 999L;
+      LocalDateTime expiresAt = LocalDateTime.now().plusMonths(6);
+
+      when(policyRepository.findById(nonExistentPolicyId)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> policyService.setExpiration(nonExistentPolicyId, expiresAt))
+          .isInstanceOf(EntityNotFoundException.class)
+          .hasMessageContaining("999");
+    }
+  }
+
+  @Nested
+  @DisplayName("Scenario 4: Retrieving all policies for history view")
+  class GetAllPolicies {
+
+    @Test
+    @DisplayName("should return all policies including deactivated ones")
+    void shouldReturnAllPoliciesIncludingDeactivated() {
+      LocalDateTime now = LocalDateTime.now();
+      Policy activePolicy =
+          Policy.builder()
+              .id(1L)
+              .policyId("100")
+              .authorUserId("1")
+              .categoryId(1)
+              .name("Active Policy")
+              .version(1)
+              .createdAt(now)
+              .startsAt(now.minusDays(10))
+              .expiresAt(null)
+              .category(1)
+              .authorizedRole(2)
+              .build();
+      Policy expiredPolicy =
+          Policy.builder()
+              .id(2L)
+              .policyId("200")
+              .authorUserId("1")
+              .categoryId(1)
+              .name("Expired Policy")
+              .version(1)
+              .createdAt(now.minusYears(2))
+              .startsAt(now.minusYears(2))
+              .expiresAt(now.minusDays(1))
+              .category(1)
+              .authorizedRole(2)
+              .build();
+
+      when(policyRepository.findAll()).thenReturn(List.of(activePolicy, expiredPolicy));
+
+      List<PolicyDto> result = policyService.getAllPolicies();
+
+      assertThat(result).hasSize(2);
+      assertThat(result).extracting(PolicyDto::name)
+          .containsExactly("Active Policy", "Expired Policy");
+    }
+  }
 }

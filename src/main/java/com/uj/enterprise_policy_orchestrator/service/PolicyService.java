@@ -96,6 +96,28 @@ public class PolicyService {
 
     return history.stream().map(this::toDto).collect(Collectors.toList());
   }
+  
+  @Transactional
+  public PolicyDto setExpiration(Long policyId, LocalDateTime expiresAt) {
+    Policy policy =
+        policyRepository
+            .findById(policyId)
+            .orElseThrow(
+                () -> new EntityNotFoundException("Policy not found with id: " + policyId));
+    policy.setExpiresAt(expiresAt);
+    Policy saved = policyRepository.save(policy);
+    return toDto(saved);
+  }
+
+  public List<PolicyDto> getAllPolicies() {
+    return policyRepository.findAll().stream().map(this::toDto).toList();
+  }
+
+  public List<PolicyDto> getActivePolicies() {
+    return policyRepository.findActivePolicies(LocalDateTime.now()).stream()
+        .map(this::toDto)
+        .toList();
+  }
 
   private PolicyDto toDto(Policy entity) {
     return new PolicyDto(
