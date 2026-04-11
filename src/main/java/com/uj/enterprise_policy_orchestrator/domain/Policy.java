@@ -35,7 +35,7 @@ public class Policy {
   @Column(columnDefinition = "TEXT", updatable = false)
   private String description;
 
-  @Column(nullable = false)
+  @Column(nullable = false, updatable = false)
   private Integer version;
 
   @Column(name = "created_at", nullable = false)
@@ -50,14 +50,17 @@ public class Policy {
   @Column(name = "expires_at")
   private LocalDateTime expiresAt;
 
-  @Column private BigInteger minPrice;
+  @Column(updatable = false)
+  private BigInteger minPrice;
 
-  @Column private BigInteger maxPrice;
+  @Column(updatable = false)
+  private BigInteger maxPrice;
 
   @Column(nullable = false)
   private Integer category;
 
-  @Column private Integer authorizedRole; /* @todo enum and strict definitions */
+  @Column(updatable = false)
+  private Integer authorizedRole; /* @todo enum and strict definitions */
 
   @PrePersist
   protected void onCreate() {
