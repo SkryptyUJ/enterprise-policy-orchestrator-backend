@@ -11,7 +11,6 @@ import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
-import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,7 +29,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class PolicyServiceTest {
 
   @Mock private PolicyRepository policyRepository;
-  @Mock private UserRepository userRepository;
   @InjectMocks private PolicyService policyService;
 
   @Nested
@@ -120,31 +118,6 @@ class PolicyServiceTest {
       assertThat(saved.getName()).isEqualTo("Hardware Policy");
       assertThat(saved.getCategory()).isEqualTo(2);
     }
-
-    // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
-    // @Test
-    // @DisplayName("should throw exception when the user does not exist")
-    // void shouldThrowWhenUserNotFound() {
-    // Long nonExistentUserId = 999L;
-    // LocalDateTime startsAt = LocalDateTime.of(2026, 6, 1, 0, 0, 0);
-    // CreatePolicyDto dto = new CreatePolicyDto(
-    // "300",
-    // 1,
-    // "Test Policy",
-    // "Test",
-    // startsAt,
-    // null,
-    // new java.math.BigInteger("0"),
-    // new java.math.BigInteger("1000"),
-    // 1,
-    // 1);
-    //
-    // when(userRepository.findById(nonExistentUserId)).thenReturn(Optional.empty());
-    //
-    // assertThatThrownBy(() -> policyService.createPolicy(nonExistentUserId, dto))
-    // .isInstanceOf(EntityNotFoundException.class)
-    // .hasMessageContaining("999");
-    // }
   }
 
   @Nested
@@ -196,6 +169,244 @@ class PolicyServiceTest {
     }
   }
 
+  @Nested
+  @DisplayName("Scenario 3: User retrieves applicable policies for expense")
+  class FindApplicablePolicies {
+
+    @Test
+    @DisplayName("should find policies matching category, date, and amount range")
+    void shouldFindPoliciesMatchingCategoryDateAndAmount() {
+      // given
+      String category = "Travel";
+      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 3, 15);
+      java.math.BigDecimal amount = new java.math.BigDecimal("2500.00");
+      LocalDateTime now = LocalDateTime.now();
+
+      Policy policy1 =
+          Policy.builder()
+              .id(1L)
+              .policyId("TRAVEL-001")
+              .authorUserId("1")
+              .categoryId(1)
+              .name("Travel Policy 1")
+              .version(1)
+              .createdAt(now)
+              .startsAt(now.minusDays(30))
+              .expiresAt(now.plusDays(365))
+              .minPrice(new java.math.BigInteger("100"))
+              .maxPrice(new java.math.BigInteger("5000"))
+              .category(1)
+              .authorizedRole(1)
+              .updatedAt(now)
+              .build();
+
+      Policy policy2 =
+          Policy.builder()
+              .id(2L)
+              .policyId("TRAVEL-002")
+              .authorUserId("2")
+              .categoryId(1)
+              .name("Travel Policy 2")
+              .version(1)
+              .createdAt(now)
+              .startsAt(now.minusDays(60))
+              .expiresAt(null)
+              .minPrice(new java.math.BigInteger("500"))
+              .maxPrice(new java.math.BigInteger("10000"))
+              .category(1)
+              .authorizedRole(2)
+              .updatedAt(now.minusDays(10))
+              .build();
+
+      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+          .thenReturn(List.of(policy1, policy2));
+
+      // when
+      java.util.Set<Policy> result =
+          policyService.findApplicablePolicies(category, expenseDate, amount);
+
+      // then
+      assertThat(result).hasSize(2);
+      assertThat(result).contains(policy1, policy2);
+    }
+
+    @Test
+    @DisplayName("should return empty set when no policies match")
+    void shouldReturnEmptySetWhenNoPoliciesMatch() {
+      // given
+      String category = "NonExistent";
+      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 3, 15);
+      java.math.BigDecimal amount = new java.math.BigDecimal("1000.00");
+
+      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+          .thenReturn(List.of());
+
+      // when
+      java.util.Set<Policy> result =
+          policyService.findApplicablePolicies(category, expenseDate, amount);
+
+      // then
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("should handle single applicable policy")
+    void shouldHandleSingleApplicablePolicy() {
+      // given
+      String category = "Office";
+      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 4, 1);
+      java.math.BigDecimal amount = new java.math.BigDecimal("150.00");
+      LocalDateTime now = LocalDateTime.now();
+
+      Policy policy =
+          Policy.builder()
+              .id(1L)
+              .policyId("OFFICE-001")
+              .authorUserId("1")
+              .categoryId(2)
+              .name("Office Policy")
+              .version(1)
+              .createdAt(now)
+              .startsAt(now.minusDays(1))
+              .expiresAt(null)
+              .minPrice(java.math.BigInteger.ZERO)
+              .maxPrice(new java.math.BigInteger("500"))
+              .category(2)
+              .authorizedRole(1)
+              .updatedAt(now)
+              .build();
+
+      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+          .thenReturn(List.of(policy));
+
+      // when
+      java.util.Set<Policy> result =
+          policyService.findApplicablePolicies(category, expenseDate, amount);
+
+      // then
+      assertThat(result).hasSize(1);
+      assertThat(result).contains(policy);
+    }
+
+    @Test
+    @DisplayName("should select latest version when multiple versions exist for same policyId")
+    void shouldSelectLatestVersionWhenMultipleVersionsExist() {
+      // given
+      String category = "Training";
+      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 5, 1);
+      java.math.BigDecimal amount = new java.math.BigDecimal("500.00");
+      LocalDateTime now = LocalDateTime.now();
+
+      // Old version of TRAINING-001
+      Policy trainingV1 =
+          Policy.builder()
+              .id(1L)
+              .policyId("TRAINING-001")
+              .authorUserId("1")
+              .categoryId(3)
+              .name("Training Policy v1")
+              .version(1)
+              .createdAt(now.minusDays(10))
+              .startsAt(now.minusDays(10))
+              .expiresAt(now.plusDays(355))
+              .minPrice(new java.math.BigInteger("50"))
+              .maxPrice(new java.math.BigInteger("1000"))
+              .category(3)
+              .authorizedRole(1)
+              .updatedAt(now.minusDays(10))
+              .build();
+
+      // New version of TRAINING-001
+      Policy trainingV2 =
+          Policy.builder()
+              .id(2L)
+              .policyId("TRAINING-001")
+              .authorUserId("1")
+              .categoryId(3)
+              .name("Training Policy v2")
+              .version(2)
+              .createdAt(now.minusDays(5))
+              .startsAt(now.minusDays(5))
+              .expiresAt(null)
+              .minPrice(new java.math.BigInteger("100"))
+              .maxPrice(new java.math.BigInteger("1500"))
+              .category(3)
+              .authorizedRole(1)
+              .updatedAt(now) // More recent
+              .build();
+
+      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+          .thenReturn(List.of(trainingV1, trainingV2));
+
+      // when
+      java.util.Set<Policy> result =
+          policyService.findApplicablePolicies(category, expenseDate, amount);
+
+      // then — only the latest version should be included
+      assertThat(result).hasSize(1);
+      assertThat(result).contains(trainingV2);
+      assertThat(result).doesNotContain(trainingV1);
+    }
+
+    @Test
+    @DisplayName("should handle mixed versions from different policies")
+    void shouldHandleMixedVersionsFromDifferentPolicies() {
+      // given
+      String category = "Meals";
+      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 6, 1);
+      java.math.BigDecimal amount = new java.math.BigDecimal("100.00");
+      LocalDateTime now = LocalDateTime.now();
+
+      // Latest version of MEALS-001
+      Policy mealsPolicy1 =
+          Policy.builder()
+              .id(1L)
+              .policyId("MEALS-001")
+              .authorUserId("1")
+              .categoryId(4)
+              .name("Meals Policy v2")
+              .version(2)
+              .createdAt(now.minusDays(10))
+              .startsAt(now.minusDays(10))
+              .expiresAt(null)
+              .minPrice(java.math.BigInteger.ZERO)
+              .maxPrice(new java.math.BigInteger("200"))
+              .category(4)
+              .authorizedRole(1)
+              .updatedAt(now)
+              .build();
+
+      // Latest version of MEALS-002
+      Policy mealsPolicy2 =
+          Policy.builder()
+              .id(2L)
+              .policyId("MEALS-002")
+              .authorUserId("2")
+              .categoryId(4)
+              .name("Meals Policy 2")
+              .version(1)
+              .createdAt(now.minusDays(5))
+              .startsAt(now.minusDays(5))
+              .expiresAt(null)
+              .minPrice(java.math.BigInteger.ZERO)
+              .maxPrice(new java.math.BigInteger("150"))
+              .category(4)
+              .authorizedRole(1)
+              .updatedAt(now.minusDays(1))
+              .build();
+
+      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+          .thenReturn(List.of(mealsPolicy1, mealsPolicy2));
+
+      // when
+      java.util.Set<Policy> result =
+          policyService.findApplicablePolicies(category, expenseDate, amount);
+
+      // then
+      assertThat(result).hasSize(2);
+      assertThat(result).contains(mealsPolicy1, mealsPolicy2);
+    }
+  }
 
   @Nested
   @DisplayName("Scenario 4: User retrieves policy history")
@@ -243,8 +454,7 @@ class PolicyServiceTest {
               .authorizedRole(2)
               .build();
 
-      when(policyRepository.findByPolicyIdOrderByVersionDesc(policyId))
-          .thenReturn(List.of(v2, v1));
+      when(policyRepository.findByPolicyIdOrderByVersionDesc(policyId)).thenReturn(List.of(v2, v1));
 
       List<PolicyDto> result = policyService.getPolicyHistory(policyId);
 

@@ -17,7 +17,7 @@ public class ExpenseRequestController {
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   public ExpenseRequestDto createExpenseRequest(
-      @PathVariable Long userId, @RequestBody CreateExpenseRequestDto dto) {
+      @PathVariable String userId, @RequestBody CreateExpenseRequestDto dto) {
     return expenseRequestService.createExpenseRequest(userId, dto);
   }
 }

@@ -1,12 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -50,26 +44,35 @@ public class Policy {
   @Column(name = "starts_at", nullable = false, updatable = false)
   private LocalDateTime startsAt;
 
-  @Column(name = "expires_at", nullable = true)
+  @Column(name = "updated_at", nullable = false)
+  private LocalDateTime updatedAt;
+
+  @Column(name = "expires_at")
   private LocalDateTime expiresAt;
 
-  @Column(nullable = true, updatable = false)
+  @Column(updatable = false)
   private BigInteger minPrice;
 
-  @Column(nullable = true, updatable = false)
+  @Column(updatable = false)
   private BigInteger maxPrice;
 
-  @Column(nullable = false, updatable = false)
+  @Column(nullable = false)
   private Integer category;
 
-  @Column(nullable = true, updatable = false)
+  @Column(updatable = false)
   private Integer authorizedRole; /* @todo enum and strict definitions */
 
   @PrePersist
   protected void onCreate() {
     createdAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now();
     if (version == null) {
       version = 1;
     }
+  }
+
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = LocalDateTime.now();
   }
 }
