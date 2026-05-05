@@ -1,7 +1,7 @@
 package com.uj.enterprise_policy_orchestrator.domain;
 
 import jakarta.persistence.*;
-import java.math.BigInteger;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -51,13 +51,13 @@ public class Policy {
   private LocalDateTime expiresAt;
 
   @Column(updatable = false)
-  private BigInteger minPrice;
+  private BigDecimal minPrice;
 
   @Column(updatable = false)
-  private BigInteger maxPrice;
+  private BigDecimal maxPrice;
 
-  @Column(nullable = false)
-  private Integer category;
+  @Column(nullable = false, length = 100)
+  private String category;
 
   @Column(updatable = false)
   private Integer authorizedRole; /* @todo enum and strict definitions */

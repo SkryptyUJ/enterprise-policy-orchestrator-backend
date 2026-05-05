@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: enterprise-policy-orchestrator-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/test_db
+    username: test_user
+    password: test_password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+

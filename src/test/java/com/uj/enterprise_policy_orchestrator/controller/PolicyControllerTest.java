@@ -66,9 +66,9 @@ class PolicyControllerTest {
               createdAt,
               startsAt,
               expiresAt,
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "1",
               2);
 
       when(policyService.createPolicy(eq(userId), any(CreatePolicyDto.class)))
@@ -121,9 +121,9 @@ class PolicyControllerTest {
               createdAt,
               LocalDateTime.of(2026, 5, 1, 0, 0, 0),
               null,
-              new java.math.BigInteger("500"),
-              new java.math.BigInteger("10000"),
-              2,
+              new java.math.BigDecimal("500"),
+              new java.math.BigDecimal("10000"),
+              "2",
               3);
 
       when(policyService.createPolicy(eq(userId), any(CreatePolicyDto.class)))
@@ -180,9 +180,9 @@ class PolicyControllerTest {
               now,
               now.plusDays(1),
               now.plusYears(1),
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "1",
               2);
 
       when(policyService.getPolicyByPolicyId(policyId)).thenReturn(responseDto);
@@ -218,9 +218,9 @@ class PolicyControllerTest {
               now,
               now.plusDays(1),
               null,
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "1",
               2);
 
       PolicyDto v1 =
@@ -236,9 +236,9 @@ class PolicyControllerTest {
               now.minusDays(1),
               now.minusDays(1),
               now.plusDays(1),
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "1",
               2);
 
       when(policyService.getPolicyHistory(policyId)).thenReturn(List.of(v2, v1));

@@ -12,7 +12,6 @@ import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -56,11 +55,11 @@ class ExpenseRequestServiceTest {
           Policy.builder()
               .id(1L)
               .policyId("POL-001")
-              .category(1)
+              .category("Travel")
               .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
               .expiresAt(null)
-              .minPrice(BigInteger.ZERO)
-              .maxPrice(new BigInteger("10000"))
+              .minPrice(BigDecimal.ZERO)
+              .maxPrice(new BigDecimal("10000"))
               .build();
 
       Set<Policy> applicablePolicies = new HashSet<>();
@@ -226,22 +225,22 @@ class ExpenseRequestServiceTest {
           Policy.builder()
               .id(1L)
               .policyId("TRAVEL-001")
-              .category(1)
+              .category("Travel")
               .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0))
               .expiresAt(LocalDateTime.of(2026, 12, 31, 23, 59))
-              .minPrice(new BigInteger("100"))
-              .maxPrice(new BigInteger("5000"))
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
               .build();
 
       Policy policy2 =
           Policy.builder()
               .id(2L)
               .policyId("TRAVEL-002")
-              .category(1)
+              .category("Travel")
               .startsAt(LocalDateTime.of(2025, 1, 1, 0, 0))
               .expiresAt(null)
-              .minPrice(BigInteger.ZERO)
-              .maxPrice(new BigInteger("10000"))
+              .minPrice(BigDecimal.ZERO)
+              .maxPrice(new BigDecimal("10000"))
               .build();
 
       Set<Policy> applicablePolicies = new HashSet<>();
@@ -290,11 +289,11 @@ class ExpenseRequestServiceTest {
           Policy.builder()
               .id(1L)
               .policyId("OFFICE-001")
-              .category(2)
+              .category("Travel")
               .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0))
               .expiresAt(null)
-              .minPrice(BigInteger.ZERO)
-              .maxPrice(new BigInteger("500"))
+              .minPrice(BigDecimal.ZERO)
+              .maxPrice(new BigDecimal("500"))
               .build();
 
       Set<Policy> applicablePolicies = new HashSet<>();
