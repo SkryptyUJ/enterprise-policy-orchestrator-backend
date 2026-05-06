@@ -31,11 +31,8 @@ public class ExpenseRequestService {
             .expenseDate(dto.expenseDate())
             .build();
 
-    IO.println("EXPENSE_REQUEST: " + request.toString());
-
     Set<Policy> applicablePolicies = findApplicablePolicies(request);
     if (applicablePolicies.isEmpty()) {
-      IO.println("NO APPLICABLE POLICIES FOUND");
       request.setStatus(ExpenseRequestStatus.DECLINED);
       throw new NoApplicablePoliciesException();
     }
