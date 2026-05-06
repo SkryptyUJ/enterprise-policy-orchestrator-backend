@@ -2,9 +2,6 @@ spring:
   application:
     name: enterprise-policy-orchestrator-backend
   datasource:
-    url: jdbc:postgresql://localhost:5432/test_db
-    username: test_user
-    password: test_password
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
