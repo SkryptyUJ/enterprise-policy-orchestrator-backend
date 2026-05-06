@@ -39,8 +39,6 @@ class PolicyServiceTest {
     @DisplayName("should create a policy with given data and automatic timestamps")
     void shouldCreatePolicyWithTimestamps() {
       String userId = "1";
-      // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
-      // User author = User.builder().id(userId).username("admin.user").build();
 
       LocalDateTime startsAt = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       LocalDateTime expiresAt = LocalDateTime.of(2027, 3, 31, 23, 59, 59);
@@ -53,9 +51,9 @@ class PolicyServiceTest {
               "Company travel expense policy",
               startsAt,
               expiresAt,
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "Travel",
               2);
 
       // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
@@ -80,8 +78,7 @@ class PolicyServiceTest {
     @DisplayName("should persist the policy in the database")
     void shouldPersistPolicyInDatabase() {
       String userId = "2";
-      // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
-      // User author = User.builder().id(userId).username("policy.creator").build();
+
       LocalDateTime startsAt = LocalDateTime.of(2026, 5, 1, 0, 0, 0);
 
       CreatePolicyDto dto =
@@ -92,9 +89,9 @@ class PolicyServiceTest {
               "Computer equipment policy",
               startsAt,
               null,
-              new java.math.BigInteger("500"),
-              new java.math.BigInteger("10000"),
-              2,
+              new java.math.BigDecimal("500"),
+              new java.math.BigDecimal("10000"),
+              "Travel",
               3);
 
       // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
@@ -116,7 +113,7 @@ class PolicyServiceTest {
       assertThat(saved.getAuthorUserId()).isEqualTo(userId);
       assertThat(saved.getPolicyId()).isEqualTo("200");
       assertThat(saved.getName()).isEqualTo("Hardware Policy");
-      assertThat(saved.getCategory()).isEqualTo(2);
+      assertThat(saved.getCategory()).isEqualTo("Travel");
     }
   }
 
@@ -141,9 +138,9 @@ class PolicyServiceTest {
               .createdAt(now)
               .startsAt(now.plusDays(1))
               .expiresAt(now.plusYears(1))
-              .minPrice(new java.math.BigInteger("100"))
-              .maxPrice(new java.math.BigInteger("5000"))
-              .category(1)
+              .minPrice(new java.math.BigDecimal("100"))
+              .maxPrice(new java.math.BigDecimal("5000"))
+              .category("Travel")
               .authorizedRole(2)
               .build();
 
@@ -178,7 +175,7 @@ class PolicyServiceTest {
     void shouldFindPoliciesMatchingCategoryDateAndAmount() {
       // given
       String category = "Travel";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 3, 15);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 3, 15, 22, 34, 22);
       java.math.BigDecimal amount = new java.math.BigDecimal("2500.00");
       LocalDateTime now = LocalDateTime.now();
 
@@ -193,9 +190,9 @@ class PolicyServiceTest {
               .createdAt(now)
               .startsAt(now.minusDays(30))
               .expiresAt(now.plusDays(365))
-              .minPrice(new java.math.BigInteger("100"))
-              .maxPrice(new java.math.BigInteger("5000"))
-              .category(1)
+              .minPrice(new java.math.BigDecimal("100"))
+              .maxPrice(new java.math.BigDecimal("5000"))
+              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now)
               .build();
@@ -211,9 +208,9 @@ class PolicyServiceTest {
               .createdAt(now)
               .startsAt(now.minusDays(60))
               .expiresAt(null)
-              .minPrice(new java.math.BigInteger("500"))
-              .maxPrice(new java.math.BigInteger("10000"))
-              .category(1)
+              .minPrice(new java.math.BigDecimal("500"))
+              .maxPrice(new java.math.BigDecimal("10000"))
+              .category("Travel")
               .authorizedRole(2)
               .updatedAt(now.minusDays(10))
               .build();
@@ -235,7 +232,7 @@ class PolicyServiceTest {
     void shouldReturnEmptySetWhenNoPoliciesMatch() {
       // given
       String category = "NonExistent";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 3, 15);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 3, 15, 0, 45, 56);
       java.math.BigDecimal amount = new java.math.BigDecimal("1000.00");
 
       when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
@@ -254,7 +251,7 @@ class PolicyServiceTest {
     void shouldHandleSingleApplicablePolicy() {
       // given
       String category = "Office";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 4, 1);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       java.math.BigDecimal amount = new java.math.BigDecimal("150.00");
       LocalDateTime now = LocalDateTime.now();
 
@@ -269,9 +266,9 @@ class PolicyServiceTest {
               .createdAt(now)
               .startsAt(now.minusDays(1))
               .expiresAt(null)
-              .minPrice(java.math.BigInteger.ZERO)
-              .maxPrice(new java.math.BigInteger("500"))
-              .category(2)
+              .minPrice(java.math.BigDecimal.ZERO)
+              .maxPrice(new java.math.BigDecimal("500"))
+              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now)
               .build();
@@ -293,7 +290,7 @@ class PolicyServiceTest {
     void shouldSelectLatestVersionWhenMultipleVersionsExist() {
       // given
       String category = "Training";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 5, 1);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 5, 1, 0, 34, 18);
       java.math.BigDecimal amount = new java.math.BigDecimal("500.00");
       LocalDateTime now = LocalDateTime.now();
 
@@ -309,9 +306,9 @@ class PolicyServiceTest {
               .createdAt(now.minusDays(10))
               .startsAt(now.minusDays(10))
               .expiresAt(now.plusDays(355))
-              .minPrice(new java.math.BigInteger("50"))
-              .maxPrice(new java.math.BigInteger("1000"))
-              .category(3)
+              .minPrice(new java.math.BigDecimal("50"))
+              .maxPrice(new java.math.BigDecimal("1000"))
+              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now.minusDays(10))
               .build();
@@ -328,9 +325,9 @@ class PolicyServiceTest {
               .createdAt(now.minusDays(5))
               .startsAt(now.minusDays(5))
               .expiresAt(null)
-              .minPrice(new java.math.BigInteger("100"))
-              .maxPrice(new java.math.BigInteger("1500"))
-              .category(3)
+              .minPrice(new java.math.BigDecimal("100"))
+              .maxPrice(new java.math.BigDecimal("1500"))
+              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now) // More recent
               .build();
@@ -353,7 +350,7 @@ class PolicyServiceTest {
     void shouldHandleMixedVersionsFromDifferentPolicies() {
       // given
       String category = "Meals";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 6, 1);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 6, 1, 22, 33, 44);
       java.math.BigDecimal amount = new java.math.BigDecimal("100.00");
       LocalDateTime now = LocalDateTime.now();
 
@@ -369,9 +366,9 @@ class PolicyServiceTest {
               .createdAt(now.minusDays(10))
               .startsAt(now.minusDays(10))
               .expiresAt(null)
-              .minPrice(java.math.BigInteger.ZERO)
-              .maxPrice(new java.math.BigInteger("200"))
-              .category(4)
+              .minPrice(java.math.BigDecimal.ZERO)
+              .maxPrice(new java.math.BigDecimal("200"))
+              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now)
               .build();
@@ -388,9 +385,9 @@ class PolicyServiceTest {
               .createdAt(now.minusDays(5))
               .startsAt(now.minusDays(5))
               .expiresAt(null)
-              .minPrice(java.math.BigInteger.ZERO)
-              .maxPrice(new java.math.BigInteger("150"))
-              .category(4)
+              .minPrice(java.math.BigDecimal.ZERO)
+              .maxPrice(new java.math.BigDecimal("150"))
+              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now.minusDays(1))
               .build();
@@ -430,9 +427,9 @@ class PolicyServiceTest {
               .createdAt(now)
               .startsAt(now.plusDays(1))
               .expiresAt(null)
-              .minPrice(new java.math.BigInteger("100"))
-              .maxPrice(new java.math.BigInteger("5000"))
-              .category(1)
+              .minPrice(new java.math.BigDecimal("100"))
+              .maxPrice(new java.math.BigDecimal("5000"))
+              .category("Travel")
               .authorizedRole(2)
               .build();
 
@@ -448,9 +445,9 @@ class PolicyServiceTest {
               .createdAt(now.minusDays(1))
               .startsAt(now.minusDays(1))
               .expiresAt(now.plusDays(1))
-              .minPrice(new java.math.BigInteger("100"))
-              .maxPrice(new java.math.BigInteger("5000"))
-              .category(1)
+              .minPrice(new java.math.BigDecimal("100"))
+              .maxPrice(new java.math.BigDecimal("5000"))
+              .category("Travel")
               .authorizedRole(2)
               .build();
 

@@ -1,6 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.dto;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record PolicyDto(
@@ -15,7 +15,7 @@ public record PolicyDto(
     LocalDateTime createdAt,
     LocalDateTime startsAt,
     LocalDateTime expiresAt,
-    BigInteger minPrice,
-    BigInteger maxPrice,
-    Integer category,
+    BigDecimal minPrice,
+    BigDecimal maxPrice,
+    String category,
     Integer authorizedRole) {}

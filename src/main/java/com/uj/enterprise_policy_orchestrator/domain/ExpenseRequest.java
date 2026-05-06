@@ -3,7 +3,6 @@ package com.uj.enterprise_policy_orchestrator.domain;
 import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -37,7 +36,7 @@ public class ExpenseRequest {
   private String description;
 
   @Column(name = "expense_date", nullable = false)
-  private LocalDate expenseDate;
+  private LocalDateTime expenseDate;
 
   @Column(name = "submitted_at", nullable = false, updatable = false)
   private LocalDateTime submittedAt;
