@@ -37,6 +37,7 @@ dependencies {
 	runtimeOnly("org.flywaydb:flyway-database-postgresql")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation("org.springframework.boot:spring-boot-test")
 	testImplementation("org.springframework.boot:spring-boot-test-autoconfigure")
 	testImplementation("org.springframework:spring-test")

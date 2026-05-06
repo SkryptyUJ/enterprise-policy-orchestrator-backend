@@ -103,7 +103,8 @@ class ExpenseRequestServiceTest {
       LocalDateTime expenseDate = LocalDateTime.now();
 
       CreateExpenseRequestDto dto =
-          new CreateExpenseRequestDto(new BigDecimal("250.00"), "Office supplies", "Printer toner", expenseDate);
+          new CreateExpenseRequestDto(
+              new BigDecimal("250.00"), "Office supplies", "Printer toner", expenseDate);
 
       Policy policy = Policy.builder().id(1L).build();
       Set<Policy> applicablePolicies = new HashSet<>();
