@@ -70,7 +70,7 @@ class ExpenseRequestControllerTest {
             "amount": 1500.00,
             "category": "Business travel",
             "description": "Business trip to Krakow – train tickets and hotel",
-            "expenseDate": "2026-03-20"
+            "expenseDate": "2026-03-20T00:00:00"
           }
           """;
 
@@ -87,7 +87,7 @@ class ExpenseRequestControllerTest {
           .andExpect(jsonPath("$.category").value("Business travel"))
           .andExpect(
               jsonPath("$.description").value("Business trip to Krakow – train tickets and hotel"))
-          .andExpect(jsonPath("$.expenseDate").value("2026-03-20"))
+          .andExpect(jsonPath("$.expenseDate").value("2026-03-20T00:00:00"))
           .andExpect(jsonPath("$.submittedAt").exists())
           .andExpect(jsonPath("$.status").value("WAITING_FOR_APPROVAL"));
     }
@@ -119,7 +119,7 @@ class ExpenseRequestControllerTest {
             "amount": 42.50,
             "category": "Office supplies",
             "description": "Pens",
-            "expenseDate": "2026-06-15"
+            "expenseDate": "2026-06-15T00:00:00"
           }
           """;
 
