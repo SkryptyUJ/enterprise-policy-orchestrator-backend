@@ -6,7 +6,6 @@ import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.BinaryOperator;
@@ -84,7 +83,7 @@ public class PolicyService {
   }
 
   public Set<Policy> findApplicablePolicies(
-      String category, LocalDate expenseDate, BigDecimal amount) {
+      String category, LocalDateTime expenseDate, BigDecimal amount) {
     List<Policy> applicablePolicies =
         policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount);
 

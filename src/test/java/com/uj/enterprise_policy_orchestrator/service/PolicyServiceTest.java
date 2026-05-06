@@ -175,7 +175,7 @@ class PolicyServiceTest {
     void shouldFindPoliciesMatchingCategoryDateAndAmount() {
       // given
       String category = "Travel";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 3, 15);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 3, 15, 22, 34, 22);
       java.math.BigDecimal amount = new java.math.BigDecimal("2500.00");
       LocalDateTime now = LocalDateTime.now();
 
@@ -232,7 +232,7 @@ class PolicyServiceTest {
     void shouldReturnEmptySetWhenNoPoliciesMatch() {
       // given
       String category = "NonExistent";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 3, 15);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 3, 15, 0, 45, 56);
       java.math.BigDecimal amount = new java.math.BigDecimal("1000.00");
 
       when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
@@ -251,7 +251,7 @@ class PolicyServiceTest {
     void shouldHandleSingleApplicablePolicy() {
       // given
       String category = "Office";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 4, 1);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       java.math.BigDecimal amount = new java.math.BigDecimal("150.00");
       LocalDateTime now = LocalDateTime.now();
 
@@ -290,7 +290,7 @@ class PolicyServiceTest {
     void shouldSelectLatestVersionWhenMultipleVersionsExist() {
       // given
       String category = "Training";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 5, 1);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 5, 1, 0, 34, 18);
       java.math.BigDecimal amount = new java.math.BigDecimal("500.00");
       LocalDateTime now = LocalDateTime.now();
 
@@ -350,7 +350,7 @@ class PolicyServiceTest {
     void shouldHandleMixedVersionsFromDifferentPolicies() {
       // given
       String category = "Meals";
-      java.time.LocalDate expenseDate = java.time.LocalDate.of(2026, 6, 1);
+      java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 6, 1, 22, 33, 44);
       java.math.BigDecimal amount = new java.math.BigDecimal("100.00");
       LocalDateTime now = LocalDateTime.now();
 

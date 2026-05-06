@@ -17,11 +17,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 @DisplayName("Policy Controller E2E Tests")
 class PolicyIT extends AbstractIntegrationTest {
-  @Autowired private RestTemplate restTemplate;
+  private final RestTemplate restTemplate = new RestTemplate();
   @Autowired private PolicyRepository policyRepository;
 
   @BeforeEach
@@ -53,7 +54,7 @@ class PolicyIT extends AbstractIntegrationTest {
               expiresAt,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "1",
+              "Travel",
               2);
       var beforeCount = policyRepository.count();
       ResponseEntity<PolicyDto> response =
@@ -84,7 +85,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("500"),
               new BigDecimal("10000"),
-              "2",
+              "Hardware",
               3);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -111,7 +112,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               null,
               null,
-              "3",
+              "Custom",
               1);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -140,7 +141,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("1000"),
-              "1",
+              "Travel",
               1);
       ResponseEntity<PolicyDto> v1Response =
           restTemplate.postForEntity(
@@ -159,7 +160,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("200"),
               new BigDecimal("2000"),
-              "1",
+              "Travel",
               2);
       ResponseEntity<PolicyDto> v2Response =
           restTemplate.postForEntity(
@@ -191,7 +192,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "1",
+              "Travel",
               1);
       restTemplate.postForEntity(
           baseUrl() + "/api/users/{userId}/policies", createRequest, PolicyDto.class, userId);
@@ -229,7 +230,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("1000"),
-              "1",
+              "Travel",
               1);
       restTemplate.postForEntity(
           baseUrl() + "/api/users/{userId}/policies", v1Request, PolicyDto.class, userId);
@@ -244,7 +245,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("200"),
               new BigDecimal("2000"),
-              "1",
+              "Travel",
               2);
       restTemplate.postForEntity(
           baseUrl() + "/api/users/{userId}/policies", v2Request, PolicyDto.class, userId);
@@ -259,7 +260,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("300"),
               new BigDecimal("3000"),
-              "1",
+              "Travel",
               3);
       restTemplate.postForEntity(
           baseUrl() + "/api/users/{userId}/policies", v3Request, PolicyDto.class, userId);
@@ -282,13 +283,16 @@ class PolicyIT extends AbstractIntegrationTest {
     void shouldReturn404WhenPolicyNotFound() {
       String userId = "user-notfound";
       String nonExistentPolicyId = "NONEXISTENT-POL-001";
-      ResponseEntity<PolicyDto> response =
-          restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/policies/{policyId}",
-              PolicyDto.class,
-              userId,
-              nonExistentPolicyId);
-      assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+      HttpClientErrorException.NotFound exception =
+          assertThrows(
+              HttpClientErrorException.NotFound.class,
+              () ->
+                  restTemplate.getForEntity(
+                      baseUrl() + "/api/users/{userId}/policies/{policyId}",
+                      PolicyDto.class,
+                      userId,
+                      nonExistentPolicyId));
+      assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
     }
   }
 
@@ -351,13 +355,16 @@ class PolicyIT extends AbstractIntegrationTest {
     void shouldReturn404WhenHistoryNotFound() {
       String userId = "user-history-notfound";
       String nonExistentPolicyId = "NONEXISTENT-HISTORY-001";
-      ResponseEntity<PolicyDto[]> response =
-          restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/policies/{policyId}/history",
-              PolicyDto[].class,
-              userId,
-              nonExistentPolicyId);
-      assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+      HttpClientErrorException.NotFound exception =
+          assertThrows(
+              HttpClientErrorException.NotFound.class,
+              () ->
+                  restTemplate.getForEntity(
+                      baseUrl() + "/api/users/{userId}/policies/{policyId}/history",
+                      PolicyDto[].class,
+                      userId,
+                      nonExistentPolicyId));
+      assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
     }
   }
 
@@ -377,10 +384,10 @@ class PolicyIT extends AbstractIntegrationTest {
               "Indefinite Policy",
               "Policy with no expiration",
               startsAt,
-              null, // No expiration
+              null,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "1",
+              "Travel",
               1);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -406,7 +413,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               null,
               null,
-              "2",
+              "Office",
               1);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -433,7 +440,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "1",
+              "Travel",
               1);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -475,11 +482,10 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "1",
+              "Travel",
               1);
-      ResponseEntity<PolicyDto> v1Response =
-          restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/policies", v1Request, PolicyDto.class, userId);
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/policies", v1Request, PolicyDto.class, userId);
 
       CreatePolicyDto v2Request =
           new CreatePolicyDto(
@@ -491,11 +497,10 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("200"),
               new BigDecimal("5000"),
-              "1",
+              "Travel",
               1);
-      ResponseEntity<PolicyDto> v2Response =
-          restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/policies", v2Request, PolicyDto.class, userId);
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/policies", v2Request, PolicyDto.class, userId);
 
       ResponseEntity<PolicyDto[]> historyResponse =
           restTemplate.getForEntity(
@@ -530,7 +535,7 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               largeMin,
               largeMax,
-              "1",
+              "Travel",
               1);
 
       ResponseEntity<PolicyDto> response =
@@ -550,6 +555,14 @@ class PolicyIT extends AbstractIntegrationTest {
       long initialCount = policyRepository.count();
 
       for (int i = 0; i < 5; i++) {
+        String category =
+            switch (i) {
+              case 0 -> "Travel";
+              case 1 -> "Hardware";
+              case 2 -> "Office";
+              case 3 -> "Training";
+              default -> "Meals";
+            };
         CreatePolicyDto request =
             new CreatePolicyDto(
                 Optional.of("POLICY-COUNT-" + i),
@@ -560,7 +573,7 @@ class PolicyIT extends AbstractIntegrationTest {
                 null,
                 new BigDecimal("100"),
                 new BigDecimal("5000"),
-                i + "1",
+                category,
                 1);
         restTemplate.postForEntity(
             baseUrl() + "/api/users/{userId}/policies", request, PolicyDto.class, userId);

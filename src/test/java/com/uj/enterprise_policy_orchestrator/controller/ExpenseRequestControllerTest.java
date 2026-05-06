@@ -11,7 +11,6 @@ import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.service.ExpenseRequestService;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -57,7 +56,7 @@ class ExpenseRequestControllerTest {
               new BigDecimal("1500.00"),
               "Business travel",
               "Business trip to Krakow – train tickets and hotel",
-              LocalDate.of(2026, 3, 20),
+              LocalDateTime.of(2026, 3, 20, 0, 0, 0),
               submittedAt,
               ExpenseRequestStatus.WAITING_FOR_APPROVAL);
 
@@ -106,7 +105,7 @@ class ExpenseRequestControllerTest {
               new BigDecimal("42.50"),
               "Office supplies",
               "Pens",
-              LocalDate.of(2026, 6, 15),
+              LocalDateTime.of(2026, 6, 15, 0, 0, 0),
               LocalDateTime.now(),
               ExpenseRequestStatus.WAITING_FOR_APPROVAL);
 
