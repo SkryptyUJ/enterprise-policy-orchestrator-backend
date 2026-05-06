@@ -100,17 +100,17 @@ class ExpenseRequestServiceTest {
     void shouldPersistExpenseRequestInDatabase() {
       // given
       String userId = "user-456";
+      LocalDateTime expenseDate = LocalDateTime.now();
 
       CreateExpenseRequestDto dto =
-          new CreateExpenseRequestDto(
-              new BigDecimal("250.00"), "Office supplies", "Printer toner", LocalDateTime.now());
+          new CreateExpenseRequestDto(new BigDecimal("250.00"), "Office supplies", "Printer toner", expenseDate);
 
       Policy policy = Policy.builder().id(1L).build();
       Set<Policy> applicablePolicies = new HashSet<>();
       applicablePolicies.add(policy);
 
       when(policyService.findApplicablePolicies(
-              "Office supplies", LocalDateTime.now(), new BigDecimal("250.00")))
+              "Office supplies", expenseDate, new BigDecimal("250.00")))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -135,7 +135,7 @@ class ExpenseRequestServiceTest {
       assertThat(saved.getAmount()).isEqualByComparingTo("250.00");
       assertThat(saved.getCategory()).isEqualTo("Office supplies");
       assertThat(saved.getDescription()).isEqualTo("Printer toner");
-      assertThat(saved.getExpenseDate()).isEqualTo(LocalDateTime.now());
+      assertThat(saved.getExpenseDate()).isEqualTo(expenseDate);
     }
 
     @Test
