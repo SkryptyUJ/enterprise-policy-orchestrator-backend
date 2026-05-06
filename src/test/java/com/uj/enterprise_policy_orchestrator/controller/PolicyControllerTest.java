@@ -182,7 +182,7 @@ class PolicyControllerTest {
               now.plusYears(1),
               new java.math.BigDecimal("100"),
               new java.math.BigDecimal("5000"),
-              "1",
+              "Travel",
               2);
 
       when(policyService.getPolicyByPolicyId(policyId)).thenReturn(responseDto);
@@ -220,7 +220,7 @@ class PolicyControllerTest {
               null,
               new java.math.BigDecimal("100"),
               new java.math.BigDecimal("5000"),
-              "1",
+              "Travel",
               2);
 
       PolicyDto v1 =
@@ -238,7 +238,7 @@ class PolicyControllerTest {
               now.plusDays(1),
               new java.math.BigDecimal("100"),
               new java.math.BigDecimal("5000"),
-              "1",
+              "Travel",
               2);
 
       when(policyService.getPolicyHistory(policyId)).thenReturn(List.of(v2, v1));
