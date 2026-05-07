@@ -1,8 +1,12 @@
 package com.uj.enterprise_policy_orchestrator.service;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
@@ -25,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ExpenseRequestService")
@@ -422,9 +427,9 @@ class ExpenseRequestServiceTest {
               .createdAt(now.minusDays(30))
               .startsAt(now.minusDays(30))
               .expiresAt(null)
-            .minPrice(new java.math.BigDecimal("100"))
-            .maxPrice(new java.math.BigDecimal("5000"))
-            .category("1")
+              .minPrice(new java.math.BigDecimal("100"))
+              .maxPrice(new java.math.BigDecimal("5000"))
+              .category("1")
               .authorizedRole(2)
               .build();
 
@@ -454,6 +459,103 @@ class ExpenseRequestServiceTest {
 
       verify(policyRepository).findActivePolicies(any(LocalDateTime.class));
       verify(policyRepository, never()).findAll();
+    }
+  }
+
+  @Nested
+  @DisplayName("Scenario 2: Employee reviews their submitted expense requests")
+  class GetExpenseRequestHistory {
+
+    @Test
+    @DisplayName("should retrieve all expense requests for a user sorted by submission date")
+    void shouldRetrieveExpenseRequestHistorySortedBySubmittedAt() {
+      // given — employee exists and has submitted multiple expense requests
+      Long userId = 3L;
+
+      ExpenseRequest request1 =
+          ExpenseRequest.builder()
+              .id(101L)
+              .userId("user-3")
+              .amount(new BigDecimal("500.00"))
+              .category("Travel")
+              .description("Flight to conference")
+              .expenseDate(LocalDateTime.of(2026, 1, 15, 9, 15, 0))
+              .submittedAt(LocalDateTime.of(2026, 1, 16, 10, 0, 0))
+              .build();
+
+      ExpenseRequest request2 =
+          ExpenseRequest.builder()
+              .id(102L)
+              .userId("user-3")
+              .amount(new BigDecimal("150.00"))
+              .category("Meals")
+              .description("Team lunch")
+              .expenseDate(LocalDateTime.of(2026, 1, 20, 9, 15, 0))
+              .submittedAt(LocalDateTime.of(2026, 1, 21, 14, 30, 0))
+              .build();
+
+      ExpenseRequest request3 =
+          ExpenseRequest.builder()
+              .id(103L)
+              .userId("user-3")
+              .amount(new BigDecimal("75.50"))
+              .category("Office supplies")
+              .description("Notebooks and pens")
+              .expenseDate(LocalDateTime.of(2026, 2, 1, 9, 15, 0))
+              .submittedAt(LocalDateTime.of(2026, 2, 2, 9, 15, 0))
+              .build();
+
+      when(expenseRequestRepository.findByUserId(
+              userId, Sort.by(Sort.Direction.DESC, "submittedAt")))
+          .thenReturn(java.util.List.of(request3, request2, request1));
+
+      // when — employee retrieves their expense request history
+      var result = expenseRequestService.getExpenseRequestHistory(userId);
+
+      // then — system returns all requests sorted by submission date (most recent
+      // first)
+      assertThat(result).hasSize(3);
+      assertThat(result.get(0).id()).isEqualTo(103L);
+      assertThat(result.get(1).id()).isEqualTo(102L);
+      assertThat(result.get(2).id()).isEqualTo(101L);
+
+      assertThat(result.get(0).submittedAt())
+          .isAfter(result.get(1).submittedAt())
+          .isAfter(result.get(2).submittedAt());
+    }
+
+    @Test
+    @DisplayName("should return empty list when user has no expense requests")
+    void shouldReturnEmptyListWhenNoRequests() {
+      // given — employee exists but has not submitted any expense requests
+      Long userId = 4L;
+      //   User employee = User.builder().id(userId).username("tech.supporter").build();
+
+      //   when(userRepository.findById(userId)).thenReturn(Optional.of(employee));
+      when(expenseRequestRepository.findByUserId(
+              userId, Sort.by(Sort.Direction.DESC, "submittedAt")))
+          .thenReturn(java.util.List.of());
+
+      // when — employee requests their expense request history
+      var result = expenseRequestService.getExpenseRequestHistory(userId);
+
+      // then — system returns empty list
+      assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("should throw exception when user does not exist")
+    void shouldThrowWhenUserNotFoundOnHistory() {
+      // given — user does not exist
+      Long nonExistentUserId = 999L;
+
+      when(expenseRequestRepository.findByUserId(
+              nonExistentUserId, Sort.by(Sort.Direction.DESC, "submittedAt")))
+          .thenReturn(java.util.List.of());
+
+      // when & then — system returns empty list for non-existent user
+      var result = expenseRequestService.getExpenseRequestHistory(nonExistentUserId);
+      assertThat(result).isEmpty();
     }
   }
 }

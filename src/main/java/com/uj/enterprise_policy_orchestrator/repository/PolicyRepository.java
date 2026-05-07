@@ -2,7 +2,6 @@ package com.uj.enterprise_policy_orchestrator.repository;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
