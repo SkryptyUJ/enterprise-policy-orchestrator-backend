@@ -220,9 +220,9 @@ class PolicyControllerTest {
               now.minusDays(30),
               now.minusDays(30),
               expiresAt,
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+            new java.math.BigDecimal("100"),
+            new java.math.BigDecimal("5000"),
+            "1",
               2);
 
       when(policyService.setExpiration(eq(policyId), any(LocalDateTime.class)))
@@ -269,9 +269,9 @@ class PolicyControllerTest {
               now.minusDays(10),
               now.minusDays(10),
               null,
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+            new java.math.BigDecimal("100"),
+            new java.math.BigDecimal("5000"),
+            "1",
               2);
       PolicyDto expiredPolicy =
           new PolicyDto(
@@ -286,9 +286,9 @@ class PolicyControllerTest {
               now.minusYears(2),
               now.minusYears(2),
               now.minusDays(1),
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+            new java.math.BigDecimal("100"),
+            new java.math.BigDecimal("5000"),
+            "1",
               2);
 
       when(policyService.getAllPolicies()).thenReturn(List.of(activePolicy, expiredPolicy));

@@ -495,9 +495,9 @@ class PolicyServiceTest {
               .createdAt(now.minusDays(30))
               .startsAt(now.minusDays(30))
               .expiresAt(null)
-              .minPrice(new java.math.BigInteger("100"))
-              .maxPrice(new java.math.BigInteger("5000"))
-              .category(1)
+            .minPrice(new java.math.BigDecimal("100"))
+            .maxPrice(new java.math.BigDecimal("5000"))
+            .category("1")
               .authorizedRole(2)
               .build();
 
@@ -547,7 +547,7 @@ class PolicyServiceTest {
               .createdAt(now)
               .startsAt(now.minusDays(10))
               .expiresAt(null)
-              .category(1)
+            .category("1")
               .authorizedRole(2)
               .build();
       Policy expiredPolicy =
@@ -561,7 +561,7 @@ class PolicyServiceTest {
               .createdAt(now.minusYears(2))
               .startsAt(now.minusYears(2))
               .expiresAt(now.minusDays(1))
-              .category(1)
+            .category("1")
               .authorizedRole(2)
               .build();
 
