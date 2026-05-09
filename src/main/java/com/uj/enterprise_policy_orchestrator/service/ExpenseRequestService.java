@@ -2,15 +2,15 @@ package com.uj.enterprise_policy_orchestrator.service;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.User;
+import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
-import com.uj.enterprise_policy_orchestrator.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,29 +20,30 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExpenseRequestService {
 
   private final ExpenseRequestRepository expenseRequestRepository;
-  private final UserRepository userRepository;
   private final PolicyRepository policyRepository;
+  private final PolicyService policyService;
 
   @Transactional
-  public ExpenseRequestDto createExpenseRequest(Long userId, CreateExpenseRequestDto dto) {
-    User user =
-        userRepository
-            .findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+  public ExpenseRequestDto createExpenseRequest(String userId, CreateExpenseRequestDto dto) {
 
     ExpenseRequest request =
         ExpenseRequest.builder()
-            .user(user)
+            .userId(userId)
             .amount(dto.amount())
             .category(dto.category())
             .description(dto.description())
             .expenseDate(dto.expenseDate())
             .build();
 
-    ExpenseRequest saved = expenseRequestRepository.save(request);
+    Set<Policy> applicablePolicies = findApplicablePolicies(request);
+    if (applicablePolicies.isEmpty()) {
+      request.setStatus(ExpenseRequestStatus.DECLINED);
+      throw new NoApplicablePoliciesException();
+    }
 
-    List<Policy> activePolicies = getActivePolicies();
-    evaluateAgainstPolicies(saved, activePolicies);
+    request.getApplicablePolicies().addAll(applicablePolicies);
+
+    ExpenseRequest saved = expenseRequestRepository.save(request);
 
     return toDto(saved);
   }
@@ -51,19 +52,20 @@ public class ExpenseRequestService {
     return policyRepository.findActivePolicies(LocalDateTime.now());
   }
 
-  void evaluateAgainstPolicies(ExpenseRequest request, List<Policy> activePolicies) {
-    // Evaluate the expense request against only active policies.
-    // Deactivated policies (expired) are not passed here and thus not considered.
+  private Set<Policy> findApplicablePolicies(ExpenseRequest exp) {
+    return policyService.findApplicablePolicies(
+        exp.getCategory(), exp.getExpenseDate(), exp.getAmount());
   }
 
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
     return new ExpenseRequestDto(
         entity.getId(),
-        entity.getUser().getId(),
+        entity.getUserId(),
         entity.getAmount(),
         entity.getCategory(),
         entity.getDescription(),
         entity.getExpenseDate(),
-        entity.getSubmittedAt());
+        entity.getSubmittedAt(),
+        entity.getStatus());
   }
 }

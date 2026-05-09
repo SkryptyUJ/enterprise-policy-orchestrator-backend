@@ -49,6 +49,8 @@ class PolicyControllerTest {
     @DisplayName("should return 201 CREATED with the new policy data")
     void shouldReturn201WithCreatedPolicy() throws Exception {
       String userId = "1";
+      LocalDateTime createdAt = LocalDateTime.now();
+      LocalDateTime updatedAt = LocalDateTime.now();
       LocalDateTime startsAt = LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       LocalDateTime expiresAt = LocalDateTime.of(2027, 3, 31, 23, 59, 59);
 
@@ -61,7 +63,8 @@ class PolicyControllerTest {
               "Travel Policy",
               "Company travel policy",
               1,
-              LocalDateTime.now(),
+              updatedAt,
+              createdAt,
               startsAt,
               expiresAt,
               new java.math.BigInteger("100"),
@@ -103,6 +106,8 @@ class PolicyControllerTest {
     @DisplayName("should delegate to service with correct parameters")
     void shouldDelegateToServiceWithCorrectParameters() throws Exception {
       String userId = "5";
+      LocalDateTime createdAt = LocalDateTime.of(2026, 5, 1, 0, 0, 0);
+      LocalDateTime updatedAt = LocalDateTime.now();
 
       PolicyDto responseDto =
           new PolicyDto(
@@ -113,7 +118,8 @@ class PolicyControllerTest {
               "Hardware Policy",
               "Equipment policy",
               1,
-              LocalDateTime.now(),
+              updatedAt,
+              createdAt,
               LocalDateTime.of(2026, 5, 1, 0, 0, 0),
               null,
               new java.math.BigInteger("500"),
@@ -172,6 +178,7 @@ class PolicyControllerTest {
               "Test Description",
               1,
               now,
+              now,
               now.plusDays(1),
               now.plusYears(1),
               new java.math.BigInteger("100"),
@@ -210,6 +217,7 @@ class PolicyControllerTest {
               "Policy with new end date",
               1,
               now,
+              now.minusDays(30),
               now.minusDays(30),
               expiresAt,
               new java.math.BigInteger("100"),
@@ -250,14 +258,38 @@ class PolicyControllerTest {
 
       PolicyDto activePolicy =
           new PolicyDto(
-              1L, "100", "1", 1, "Active Policy", "Active", 1, now,
-              now.minusDays(10), null, new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"), 1, 2);
+              1L,
+              "100",
+              "1",
+              1,
+              "Active Policy",
+              "Active",
+              1,
+              now,
+              now.minusDays(10),
+              now.minusDays(10),
+              null,
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
+              1,
+              2);
       PolicyDto expiredPolicy =
           new PolicyDto(
-              2L, "200", "1", 1, "Expired Policy", "Expired", 1, now,
-              now.minusYears(2), now.minusDays(1), new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"), 1, 2);
+              2L,
+              "200",
+              "1",
+              1,
+              "Expired Policy",
+              "Expired",
+              1,
+              now,
+              now.minusYears(2),
+              now.minusYears(2),
+              now.minusDays(1),
+              new java.math.BigInteger("100"),
+              new java.math.BigInteger("5000"),
+              1,
+              2);
 
       when(policyService.getAllPolicies()).thenReturn(List.of(activePolicy, expiredPolicy));
 
@@ -290,6 +322,7 @@ class PolicyControllerTest {
               "Updated",
               2,
               now,
+              now,
               now.plusDays(1),
               null,
               new java.math.BigInteger("100"),
@@ -306,6 +339,7 @@ class PolicyControllerTest {
               "Policy v1",
               "Initial",
               1,
+              now.minusDays(1),
               now.minusDays(1),
               now.minusDays(1),
               now.plusDays(1),

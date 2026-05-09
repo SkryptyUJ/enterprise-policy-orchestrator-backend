@@ -11,6 +11,7 @@ public record PolicyDto(
     String name,
     String description,
     Integer version,
+    LocalDateTime updatedAt,
     LocalDateTime createdAt,
     LocalDateTime startsAt,
     LocalDateTime expiresAt,
