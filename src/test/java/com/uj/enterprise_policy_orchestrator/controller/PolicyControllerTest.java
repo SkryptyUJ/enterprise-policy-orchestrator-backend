@@ -67,9 +67,9 @@ class PolicyControllerTest {
               createdAt,
               startsAt,
               expiresAt,
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "Travel",
               2);
 
       when(policyService.createPolicy(eq(userId), any(CreatePolicyDto.class)))
@@ -86,7 +86,7 @@ class PolicyControllerTest {
             "expiresAt": "2027-03-31T23:59:59",
             "minPrice": 100,
             "maxPrice": 5000,
-            "category": 1,
+            "category": "Travel",
             "authorizedRole": 2
           }
           """;
@@ -122,9 +122,9 @@ class PolicyControllerTest {
               createdAt,
               LocalDateTime.of(2026, 5, 1, 0, 0, 0),
               null,
-              new java.math.BigInteger("500"),
-              new java.math.BigInteger("10000"),
-              2,
+              new java.math.BigDecimal("500"),
+              new java.math.BigDecimal("10000"),
+              "Hardware",
               3);
 
       when(policyService.createPolicy(eq(userId), any(CreatePolicyDto.class)))
@@ -141,7 +141,7 @@ class PolicyControllerTest {
             "expiresAt": null,
             "minPrice": 500,
             "maxPrice": 10000,
-            "category": 2,
+            "category": "Hardware",
             "authorizedRole": 3
           }
           """;
@@ -154,7 +154,7 @@ class PolicyControllerTest {
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.authorUserId").value("5"))
           .andExpect(jsonPath("$.policyId").value("200"))
-          .andExpect(jsonPath("$.category").value(2));
+          .andExpect(jsonPath("$.category").value("Hardware"));
     }
   }
 
@@ -181,9 +181,9 @@ class PolicyControllerTest {
               now,
               now.plusDays(1),
               now.plusYears(1),
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "Travel",
               2);
 
       when(policyService.getPolicyByPolicyId(policyId)).thenReturn(responseDto);
@@ -325,9 +325,9 @@ class PolicyControllerTest {
               now,
               now.plusDays(1),
               null,
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "Travel",
               2);
 
       PolicyDto v1 =
@@ -343,9 +343,9 @@ class PolicyControllerTest {
               now.minusDays(1),
               now.minusDays(1),
               now.plusDays(1),
-              new java.math.BigInteger("100"),
-              new java.math.BigInteger("5000"),
-              1,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("5000"),
+              "Travel",
               2);
 
       when(policyService.getPolicyHistory(policyId)).thenReturn(List.of(v2, v1));
