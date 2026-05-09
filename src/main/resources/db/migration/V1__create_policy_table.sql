@@ -11,9 +11,9 @@ CREATE TABLE policy (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     starts_at TIMESTAMP NOT NULL,
     expires_at TIMESTAMP,
-    min_price NUMERIC(38,0),
-    max_price NUMERIC(38,0),
-    category INT NOT NULL,
+    min_price NUMERIC(19,2),
+    max_price NUMERIC(19,2),
+    category VARCHAR(100) NOT NULL,
     authorized_role INT
 );
 

@@ -5,7 +5,7 @@ CREATE TABLE expense_request (
     category VARCHAR(100) NOT NULL,
     description TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'WAITING_FOR_APPROVAL',
-    expense_date DATE NOT NULL,
+    expense_date TIMESTAMP NOT NULL,
     submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
