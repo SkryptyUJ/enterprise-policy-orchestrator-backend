@@ -11,9 +11,11 @@ import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
+import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,6 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ExpenseRequestServiceTest {
 
   @Mock private ExpenseRequestRepository expenseRequestRepository;
+  @Mock private PolicyRepository policyRepository;
   @Mock private PolicyService policyService;
   @InjectMocks private ExpenseRequestService expenseRequestService;
 
@@ -395,6 +398,62 @@ class ExpenseRequestServiceTest {
       assertThat(result.amount()).isEqualByComparingTo(amount);
       assertThat(result.expenseDate()).isEqualTo(expenseDate);
       assertThat(result.description()).isEqualTo(description);
+    }
+  }
+
+  @Nested
+  @DisplayName("Scenario 2: Skipping deactivated policies when evaluating new expense requests")
+  class EvaluateExpenseRequestAgainstPolicies {
+
+    @Test
+    @DisplayName("should return active policies from repository")
+    void shouldOnlyUseActivePoliciesForEvaluation() {
+      // given
+      LocalDateTime now = LocalDateTime.now();
+
+      Policy activePolicy =
+          Policy.builder()
+              .id(1L)
+              .policyId("100")
+              .authorUserId("1")
+              .categoryId(1)
+              .name("Active Travel Policy")
+              .version(1)
+              .createdAt(now.minusDays(30))
+              .startsAt(now.minusDays(30))
+              .expiresAt(null)
+            .minPrice(new java.math.BigDecimal("100"))
+            .maxPrice(new java.math.BigDecimal("5000"))
+            .category("1")
+              .authorizedRole(2)
+              .build();
+
+      // repository returns only active policies
+      when(policyRepository.findActivePolicies(any(LocalDateTime.class)))
+          .thenReturn(List.of(activePolicy));
+
+      // when
+      List<Policy> result = expenseRequestService.getActivePolicies();
+
+      // then
+      assertThat(result).containsExactly(activePolicy);
+      verify(policyRepository).findActivePolicies(any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("should return empty list when no active policies exist")
+    void shouldNotIncludeExpiredPoliciesInEvaluation() {
+      // given
+      when(policyRepository.findActivePolicies(any(LocalDateTime.class))).thenReturn(List.of());
+
+      // when
+      List<Policy> result = expenseRequestService.getActivePolicies();
+
+      // then
+      assertThat(result).isEmpty();
+
+      verify(policyRepository).findActivePolicies(any(LocalDateTime.class));
+      verify(policyRepository, never()).findAll();
     }
   }
 }

@@ -7,6 +7,9 @@ import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
+import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExpenseRequestService {
 
   private final ExpenseRequestRepository expenseRequestRepository;
+  private final PolicyRepository policyRepository;
   private final PolicyService policyService;
 
   @Transactional
@@ -40,7 +44,12 @@ public class ExpenseRequestService {
     request.getApplicablePolicies().addAll(applicablePolicies);
 
     ExpenseRequest saved = expenseRequestRepository.save(request);
+
     return toDto(saved);
+  }
+
+  List<Policy> getActivePolicies() {
+    return policyRepository.findActivePolicies(LocalDateTime.now());
   }
 
   private Set<Policy> findApplicablePolicies(ExpenseRequest exp) {

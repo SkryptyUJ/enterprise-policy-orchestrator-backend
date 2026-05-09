@@ -2,6 +2,7 @@ package com.uj.enterprise_policy_orchestrator.repository;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -29,4 +30,9 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
       @Param("category") String category,
       @Param("expenseDate") LocalDateTime expenseDate,
       @Param("amount") BigDecimal amount);
+
+  @Query(
+      "SELECT p FROM Policy p WHERE p.startsAt <= :now"
+          + " AND (p.expiresAt IS NULL OR p.expiresAt > :now)")
+  List<Policy> findActivePolicies(@Param("now") LocalDateTime now);
 }
