@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +56,19 @@ public class ExpenseRequestService {
   private Set<Policy> findApplicablePolicies(ExpenseRequest exp) {
     return policyService.findApplicablePolicies(
         exp.getCategory(), exp.getExpenseDate(), exp.getAmount());
+  }
+
+  @Transactional(readOnly = true)
+  public List<ExpenseRequestDto> getExpenseRequestHistory(Long userId) {
+    // userRepository
+    //     .findById(userId)
+    //     .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
+
+    return expenseRequestRepository
+        .findByUserId(userId, Sort.by(Sort.Direction.DESC, "submittedAt"))
+        .stream()
+        .map(this::toDto)
+        .toList();
   }
 
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
