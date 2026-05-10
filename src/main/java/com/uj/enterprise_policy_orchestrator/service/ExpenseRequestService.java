@@ -71,6 +71,31 @@ public class ExpenseRequestService {
         .toList();
   }
 
+  @Transactional
+  public ExpenseRequestDto cancelExpenseRequest(String userId, Long expenseRequestId) {
+    ExpenseRequest request =
+        expenseRequestRepository
+            .findById(expenseRequestId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Expense request not found with id: " + expenseRequestId));
+
+    if (!request.getUserId().equals(userId)) {
+      throw new IllegalArgumentException("Expense request does not belong to user: " + userId);
+    }
+
+    if (request.getStatus() != ExpenseRequestStatus.WAITING_FOR_APPROVAL) {
+      throw new IllegalArgumentException(
+          "Expense request cannot be cancelled with status: " + request.getStatus());
+    }
+
+    request.setStatus(ExpenseRequestStatus.CANCELLED);
+    ExpenseRequest cancelled = expenseRequestRepository.save(request);
+
+    return toDto(cancelled);
+  }
+
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
     return new ExpenseRequestDto(
         entity.getId(),
