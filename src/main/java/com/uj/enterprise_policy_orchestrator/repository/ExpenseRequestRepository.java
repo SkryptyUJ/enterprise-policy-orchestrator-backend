@@ -2,6 +2,7 @@ package com.uj.enterprise_policy_orchestrator.repository;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,6 +18,9 @@ public interface ExpenseRequestRepository extends JpaRepository<ExpenseRequest, 
   //    @Override
   //    @EntityGraph(attributePaths = "applicablePolicies")
   //    List<ExpenseRequest> findAll();
+
+  @EntityGraph(attributePaths = {"applicablePolicies", "resolutionPolicy"})
+  Optional<ExpenseRequest> findDetailedByIdAndUserId(Long id, String userId);
 
   List<ExpenseRequest> findByUserId(Long userId);
 

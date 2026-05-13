@@ -10,7 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.EscalatedExpenseDecisionDto;
+import com.uj.enterprise_policy_orchestrator.dto.EscalatedExpenseDecisionResultDto;
+import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDetailsDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestPolicyOptionDto;
 import com.uj.enterprise_policy_orchestrator.service.ExpenseRequestService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -207,6 +211,135 @@ class ExpenseRequestControllerTest {
           .perform(get("/api/users/{userId}/expense-requests", userId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.length()").value(0));
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/users/{userId}/expense-requests/{requestId}")
+  class GetExpenseRequestEndpoint {
+
+    @Test
+    @DisplayName("should return 200 OK with escalated request details and conflicting policies")
+    void shouldReturn200WithEscalatedRequestDetails() throws Exception {
+      // given
+      String userId = "manager-review-user";
+      Long requestId = 77L;
+
+      ExpenseRequestDetailsDto responseDto =
+          new ExpenseRequestDetailsDto(
+              requestId,
+              userId,
+              new BigDecimal("1900.00"),
+              "Travel",
+              "Flight and hotel in Berlin",
+              LocalDateTime.of(2026, 4, 30, 10, 0, 0),
+              LocalDateTime.of(2026, 5, 1, 8, 15, 0),
+              ExpenseRequestStatus.ESCALATED,
+              null,
+              List.of(
+                  new ExpenseRequestPolicyOptionDto(
+                      11L, "TRAVEL-STD", "Travel Standard", "Default travel policy"),
+                  new ExpenseRequestPolicyOptionDto(
+                      12L, "TRAVEL-EXT", "Travel Extended", "Extended travel policy")));
+
+      when(expenseRequestService.getExpenseRequestDetails(userId, requestId))
+          .thenReturn(responseDto);
+
+      // when & then
+      mockMvc
+          .perform(get("/api/users/{userId}/expense-requests/{requestId}", userId, requestId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(77))
+          .andExpect(jsonPath("$.userId").value(userId))
+          .andExpect(jsonPath("$.status").value("ESCALATED"))
+          .andExpect(jsonPath("$.conflictingPolicies.length()").value(2))
+          .andExpect(jsonPath("$.conflictingPolicies[0].id").value(11))
+          .andExpect(jsonPath("$.conflictingPolicies[1].policyId").value("TRAVEL-EXT"));
+    }
+  }
+
+  @Nested
+  @DisplayName("POST /api/users/{userId}/expense-requests/{requestId}/manager-decision")
+  class ResolveEscalatedRequestEndpoint {
+
+    @Test
+    @DisplayName("should return 200 OK and APPROVED status when manager approves")
+    void shouldReturnApprovedDecision() throws Exception {
+      // given
+      String userId = "expense-user-1";
+      Long requestId = 700L;
+
+      EscalatedExpenseDecisionResultDto responseDto =
+          new EscalatedExpenseDecisionResultDto(
+              requestId, ExpenseRequestStatus.APPROVED, 11L, "TRAVEL-STD");
+
+      when(expenseRequestService.resolveEscalatedRequest(
+              eq(userId), eq(requestId), eq("Manager"), any(EscalatedExpenseDecisionDto.class)))
+          .thenReturn(responseDto);
+
+      String requestJson =
+          """
+          {
+            "policyId": 11,
+            "decision": "APPROVE"
+          }
+          """;
+
+      // when & then
+      mockMvc
+          .perform(
+              post(
+                      "/api/users/{userId}/expense-requests/{requestId}/manager-decision",
+                      userId,
+                      requestId)
+                  .header("X-User-Role", "Manager")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(requestJson))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.requestId").value(700))
+          .andExpect(jsonPath("$.status").value("APPROVED"))
+          .andExpect(jsonPath("$.selectedPolicyId").value(11))
+          .andExpect(jsonPath("$.selectedPolicyRef").value("TRAVEL-STD"));
+    }
+
+    @Test
+    @DisplayName("should return 200 OK and DECLINED status when manager declines")
+    void shouldReturnDeclinedDecision() throws Exception {
+      // given
+      String userId = "expense-user-1";
+      Long requestId = 701L;
+
+      EscalatedExpenseDecisionResultDto responseDto =
+          new EscalatedExpenseDecisionResultDto(
+              requestId, ExpenseRequestStatus.DECLINED, 12L, "TRAVEL-EXT");
+
+      when(expenseRequestService.resolveEscalatedRequest(
+              eq(userId), eq(requestId), eq("Manager"), any(EscalatedExpenseDecisionDto.class)))
+          .thenReturn(responseDto);
+
+      String requestJson =
+          """
+          {
+            "policyId": 12,
+            "decision": "DECLINE"
+          }
+          """;
+
+      // when & then
+      mockMvc
+          .perform(
+              post(
+                      "/api/users/{userId}/expense-requests/{requestId}/manager-decision",
+                      userId,
+                      requestId)
+                  .header("X-User-Role", "Manager")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(requestJson))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.requestId").value(701))
+          .andExpect(jsonPath("$.status").value("DECLINED"))
+          .andExpect(jsonPath("$.selectedPolicyId").value(12))
+          .andExpect(jsonPath("$.selectedPolicyRef").value("TRAVEL-EXT"));
     }
   }
 }

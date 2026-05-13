@@ -3,12 +3,22 @@ package com.uj.enterprise_policy_orchestrator.service;
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.domain.enums.ManagerDecision;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.EscalatedExpenseDecisionDto;
+import com.uj.enterprise_policy_orchestrator.dto.EscalatedExpenseDecisionResultDto;
+import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDetailsDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestPolicyOptionDto;
+import com.uj.enterprise_policy_orchestrator.exception.ExpenseRequestNotEscalatedException;
+import com.uj.enterprise_policy_orchestrator.exception.ManagerRoleRequiredException;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
+import com.uj.enterprise_policy_orchestrator.exception.PolicyNotAssignedToExpenseRequestException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +53,9 @@ public class ExpenseRequestService {
     }
 
     request.getApplicablePolicies().addAll(applicablePolicies);
+    if (applicablePolicies.size() > 1) {
+      request.setStatus(ExpenseRequestStatus.ESCALATED);
+    }
 
     ExpenseRequest saved = expenseRequestRepository.save(request);
 
@@ -71,6 +84,42 @@ public class ExpenseRequestService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
+  public ExpenseRequestDetailsDto getExpenseRequestDetails(String userId, Long requestId) {
+    ExpenseRequest request = getExpenseRequestForUser(userId, requestId);
+    return toDetailsDto(request);
+  }
+
+  @Transactional
+  public EscalatedExpenseDecisionResultDto resolveEscalatedRequest(
+      String userId, Long requestId, String userRole, EscalatedExpenseDecisionDto decisionDto) {
+    requireManagerRole(userRole);
+    validateDecisionRequest(decisionDto);
+
+    ExpenseRequest request = getExpenseRequestForUser(userId, requestId);
+    if (request.getStatus() != ExpenseRequestStatus.ESCALATED) {
+      throw new ExpenseRequestNotEscalatedException(requestId, request.getStatus());
+    }
+
+    Policy selectedPolicy =
+        request.getApplicablePolicies().stream()
+            .filter(policy -> policy.getId().equals(decisionDto.policyId()))
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new PolicyNotAssignedToExpenseRequestException(
+                        request.getId(), decisionDto.policyId()));
+
+    request.setResolutionPolicy(selectedPolicy);
+    request.setStatus(
+        decisionDto.decision() == ManagerDecision.APPROVE
+            ? ExpenseRequestStatus.APPROVED
+            : ExpenseRequestStatus.DECLINED);
+
+    ExpenseRequest saved = expenseRequestRepository.save(request);
+    return toDecisionResultDto(saved);
+  }
+
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
     return new ExpenseRequestDto(
         entity.getId(),
@@ -81,5 +130,65 @@ public class ExpenseRequestService {
         entity.getExpenseDate(),
         entity.getSubmittedAt(),
         entity.getStatus());
+  }
+
+  private ExpenseRequestDetailsDto toDetailsDto(ExpenseRequest entity) {
+    List<ExpenseRequestPolicyOptionDto> conflictingPolicies =
+        entity.getApplicablePolicies().stream()
+            .map(
+                policy ->
+                    new ExpenseRequestPolicyOptionDto(
+                        policy.getId(),
+                        policy.getPolicyId(),
+                        policy.getName(),
+                        policy.getDescription()))
+            .sorted(Comparator.comparing(ExpenseRequestPolicyOptionDto::id))
+            .toList();
+
+    Long resolutionPolicyId =
+        entity.getResolutionPolicy() != null ? entity.getResolutionPolicy().getId() : null;
+
+    return new ExpenseRequestDetailsDto(
+        entity.getId(),
+        entity.getUserId(),
+        entity.getAmount(),
+        entity.getCategory(),
+        entity.getDescription(),
+        entity.getExpenseDate(),
+        entity.getSubmittedAt(),
+        entity.getStatus(),
+        resolutionPolicyId,
+        conflictingPolicies);
+  }
+
+  private EscalatedExpenseDecisionResultDto toDecisionResultDto(ExpenseRequest entity) {
+    Policy selectedPolicy = entity.getResolutionPolicy();
+    Long selectedPolicyId = selectedPolicy != null ? selectedPolicy.getId() : null;
+    String selectedPolicyRef = selectedPolicy != null ? selectedPolicy.getPolicyId() : null;
+
+    return new EscalatedExpenseDecisionResultDto(
+        entity.getId(), entity.getStatus(), selectedPolicyId, selectedPolicyRef);
+  }
+
+  private ExpenseRequest getExpenseRequestForUser(String userId, Long requestId) {
+    return expenseRequestRepository
+        .findDetailedByIdAndUserId(requestId, userId)
+        .orElseThrow(
+            () ->
+                new EntityNotFoundException(
+                    "Expense request not found for user %s and id %d"
+                        .formatted(userId, requestId)));
+  }
+
+  private void requireManagerRole(String userRole) {
+    if (userRole == null || !"manager".equalsIgnoreCase(userRole)) {
+      throw new ManagerRoleRequiredException();
+    }
+  }
+
+  private void validateDecisionRequest(EscalatedExpenseDecisionDto decisionDto) {
+    if (decisionDto == null || decisionDto.policyId() == null || decisionDto.decision() == null) {
+      throw new IllegalArgumentException("Decision payload requires policyId and decision");
+    }
   }
 }

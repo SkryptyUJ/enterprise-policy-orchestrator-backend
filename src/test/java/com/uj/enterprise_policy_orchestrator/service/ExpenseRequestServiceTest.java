@@ -11,15 +11,22 @@ import static org.mockito.Mockito.when;
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.domain.enums.ManagerDecision;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.EscalatedExpenseDecisionDto;
+import com.uj.enterprise_policy_orchestrator.dto.EscalatedExpenseDecisionResultDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.exception.ExpenseRequestNotEscalatedException;
+import com.uj.enterprise_policy_orchestrator.exception.ManagerRoleRequiredException;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
+import com.uj.enterprise_policy_orchestrator.exception.PolicyNotAssignedToExpenseRequestException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -286,6 +293,7 @@ class ExpenseRequestServiceTest {
 
       assertThat(saved.getApplicablePolicies()).hasSize(2);
       assertThat(saved.getApplicablePolicies()).contains(policy1, policy2);
+      assertThat(saved.getStatus()).isEqualTo(ExpenseRequestStatus.ESCALATED);
     }
 
     @Test
@@ -556,6 +564,174 @@ class ExpenseRequestServiceTest {
       // when & then — system returns empty list for non-existent user
       var result = expenseRequestService.getExpenseRequestHistory(nonExistentUserId);
       assertThat(result).isEmpty();
+    }
+  }
+
+  @Nested
+  @DisplayName("Scenario 6: Manager manually resolves an escalated expense request")
+  class ResolveEscalatedExpenseRequest {
+
+    @Test
+    @DisplayName("should approve an escalated request using selected policy")
+    void shouldApproveEscalatedRequest() {
+      // given
+      String userId = "expense-user-900";
+      Long requestId = 900L;
+
+      Policy policyOne =
+          Policy.builder().id(11L).policyId("TRAVEL-STD").name("Travel Standard").build();
+      Policy policyTwo =
+          Policy.builder().id(12L).policyId("TRAVEL-EXT").name("Travel Extended").build();
+
+      ExpenseRequest request =
+          ExpenseRequest.builder()
+              .id(requestId)
+              .userId(userId)
+              .status(ExpenseRequestStatus.ESCALATED)
+              .build();
+      request.getApplicablePolicies().addAll(Set.of(policyOne, policyTwo));
+
+      when(expenseRequestRepository.findDetailedByIdAndUserId(requestId, userId))
+          .thenReturn(Optional.of(request));
+      when(expenseRequestRepository.save(any(ExpenseRequest.class)))
+          .thenAnswer(invocation -> invocation.getArgument(0));
+
+      EscalatedExpenseDecisionDto decisionDto =
+          new EscalatedExpenseDecisionDto(11L, ManagerDecision.APPROVE);
+
+      // when
+      EscalatedExpenseDecisionResultDto result =
+          expenseRequestService.resolveEscalatedRequest(userId, requestId, "Manager", decisionDto);
+
+      // then
+      assertThat(result.requestId()).isEqualTo(requestId);
+      assertThat(result.status()).isEqualTo(ExpenseRequestStatus.APPROVED);
+      assertThat(result.selectedPolicyId()).isEqualTo(11L);
+      assertThat(result.selectedPolicyRef()).isEqualTo("TRAVEL-STD");
+      assertThat(request.getResolutionPolicy()).isEqualTo(policyOne);
+      verify(expenseRequestRepository).save(request);
+    }
+
+    @Test
+    @DisplayName("should decline an escalated request using selected policy")
+    void shouldDeclineEscalatedRequest() {
+      // given
+      String userId = "expense-user-901";
+      Long requestId = 901L;
+
+      Policy policyOne = Policy.builder().id(21L).policyId("TRAVEL-A").name("Travel A").build();
+      Policy policyTwo = Policy.builder().id(22L).policyId("TRAVEL-B").name("Travel B").build();
+
+      ExpenseRequest request =
+          ExpenseRequest.builder()
+              .id(requestId)
+              .userId(userId)
+              .status(ExpenseRequestStatus.ESCALATED)
+              .build();
+      request.getApplicablePolicies().addAll(Set.of(policyOne, policyTwo));
+
+      when(expenseRequestRepository.findDetailedByIdAndUserId(requestId, userId))
+          .thenReturn(Optional.of(request));
+      when(expenseRequestRepository.save(any(ExpenseRequest.class)))
+          .thenAnswer(invocation -> invocation.getArgument(0));
+
+      EscalatedExpenseDecisionDto decisionDto =
+          new EscalatedExpenseDecisionDto(22L, ManagerDecision.DECLINE);
+
+      // when
+      EscalatedExpenseDecisionResultDto result =
+          expenseRequestService.resolveEscalatedRequest(userId, requestId, "Manager", decisionDto);
+
+      // then
+      assertThat(result.requestId()).isEqualTo(requestId);
+      assertThat(result.status()).isEqualTo(ExpenseRequestStatus.DECLINED);
+      assertThat(result.selectedPolicyId()).isEqualTo(22L);
+      assertThat(result.selectedPolicyRef()).isEqualTo("TRAVEL-B");
+      assertThat(request.getResolutionPolicy()).isEqualTo(policyTwo);
+      verify(expenseRequestRepository).save(request);
+    }
+
+    @Test
+    @DisplayName("should reject decision when user role is not manager")
+    void shouldRejectWhenRoleIsNotManager() {
+      // given
+      EscalatedExpenseDecisionDto decisionDto =
+          new EscalatedExpenseDecisionDto(11L, ManagerDecision.APPROVE);
+
+      // when & then
+      assertThatThrownBy(
+              () ->
+                  expenseRequestService.resolveEscalatedRequest(
+                      "expense-user-902", 902L, "Employee", decisionDto))
+          .isInstanceOf(ManagerRoleRequiredException.class);
+
+      verify(expenseRequestRepository, never()).findDetailedByIdAndUserId(any(), any());
+      verify(expenseRequestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("should reject decision when request is not escalated")
+    void shouldRejectWhenRequestIsNotEscalated() {
+      // given
+      String userId = "expense-user-903";
+      Long requestId = 903L;
+
+      Policy policy = Policy.builder().id(31L).policyId("TRAVEL-C").name("Travel C").build();
+      ExpenseRequest request =
+          ExpenseRequest.builder()
+              .id(requestId)
+              .userId(userId)
+              .status(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
+              .build();
+      request.getApplicablePolicies().add(policy);
+
+      when(expenseRequestRepository.findDetailedByIdAndUserId(requestId, userId))
+          .thenReturn(Optional.of(request));
+
+      EscalatedExpenseDecisionDto decisionDto =
+          new EscalatedExpenseDecisionDto(31L, ManagerDecision.APPROVE);
+
+      // when & then
+      assertThatThrownBy(
+              () ->
+                  expenseRequestService.resolveEscalatedRequest(
+                      userId, requestId, "Manager", decisionDto))
+          .isInstanceOf(ExpenseRequestNotEscalatedException.class);
+
+      verify(expenseRequestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("should reject decision when selected policy is not assigned")
+    void shouldRejectWhenPolicyIsNotAssigned() {
+      // given
+      String userId = "expense-user-904";
+      Long requestId = 904L;
+
+      Policy policy =
+          Policy.builder().id(41L).policyId("TRAVEL-ASSIGNED").name("Travel Assigned").build();
+      ExpenseRequest request =
+          ExpenseRequest.builder()
+              .id(requestId)
+              .userId(userId)
+              .status(ExpenseRequestStatus.ESCALATED)
+              .build();
+      request.getApplicablePolicies().add(policy);
+
+      when(expenseRequestRepository.findDetailedByIdAndUserId(requestId, userId))
+          .thenReturn(Optional.of(request));
+
+      EscalatedExpenseDecisionDto decisionDto =
+          new EscalatedExpenseDecisionDto(999L, ManagerDecision.DECLINE);
+
+      // when & then
+      assertThatThrownBy(
+              () ->
+                  expenseRequestService.resolveEscalatedRequest(
+                      userId, requestId, "Manager", decisionDto))
+          .isInstanceOf(PolicyNotAssignedToExpenseRequestException.class);
+
+      verify(expenseRequestRepository, never()).save(any());
     }
   }
 }
