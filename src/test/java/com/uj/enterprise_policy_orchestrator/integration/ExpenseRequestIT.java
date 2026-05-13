@@ -25,7 +25,7 @@ import org.springframework.web.client.RestTemplate;
 @DisplayName("ExpenseRequest Controller E2E Tests")
 class ExpenseRequestIT extends AbstractIntegrationTest {
 
-  private final RestTemplate restTemplate = new RestTemplate();
+  @Autowired private RestTemplate restTemplate;
   @Autowired private ExpenseRequestRepository expenseRequestRepository;
   @Autowired private PolicyRepository policyRepository;
 

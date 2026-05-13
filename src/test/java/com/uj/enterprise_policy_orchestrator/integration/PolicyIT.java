@@ -22,7 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 @DisplayName("Policy Controller E2E Tests")
 class PolicyIT extends AbstractIntegrationTest {
-  private final RestTemplate restTemplate = new RestTemplate();
+  @Autowired private RestTemplate restTemplate;
   @Autowired private PolicyRepository policyRepository;
 
   @BeforeEach

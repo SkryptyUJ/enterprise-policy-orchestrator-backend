@@ -9,3 +9,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://${AUTH0_DOMAIN:dev-g5210pz7rpmrl82z.us.auth0.com}/
+          jwk-set-uri: https://${AUTH0_DOMAIN:dev-g5210pz7rpmrl82z.us.auth0.com}/.well-known/jwks.json
