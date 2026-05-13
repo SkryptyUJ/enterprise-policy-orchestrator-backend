@@ -9,4 +9,8 @@ public class NoApplicablePoliciesException extends RuntimeException {
   public NoApplicablePoliciesException() {
     super("Decline, no matching policies");
   }
+
+  public NoApplicablePoliciesException(String message) {
+    super(message);
+  }
 }

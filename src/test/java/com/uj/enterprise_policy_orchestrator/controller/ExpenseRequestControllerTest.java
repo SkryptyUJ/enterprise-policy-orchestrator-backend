@@ -61,7 +61,11 @@ class ExpenseRequestControllerTest {
               "Business trip to Krakow – train tickets and hotel",
               LocalDateTime.of(2026, 3, 20, 0, 0, 0),
               submittedAt,
-              ExpenseRequestStatus.WAITING_FOR_APPROVAL);
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              null,
+              null,
+              null,
+              null);
 
       when(expenseRequestService.createExpenseRequest(
               eq(userId), any(CreateExpenseRequestDto.class)))
@@ -110,7 +114,11 @@ class ExpenseRequestControllerTest {
               "Pens",
               LocalDateTime.of(2026, 6, 15, 0, 0, 0),
               LocalDateTime.now(),
-              ExpenseRequestStatus.WAITING_FOR_APPROVAL);
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              null,
+              null,
+              null,
+              null);
 
       when(expenseRequestService.createExpenseRequest(
               eq(userId), any(CreateExpenseRequestDto.class)))
@@ -137,6 +145,51 @@ class ExpenseRequestControllerTest {
           .andExpect(jsonPath("$.amount").value(42.50))
           .andExpect(jsonPath("$.category").value("Office supplies"));
     }
+
+        @Test
+        @DisplayName("should accept expenseDate in yyyy-MM-dd format")
+        void shouldAcceptDateOnlyExpenseDateFormat() throws Exception {
+          // given
+          String userId = "user-789";
+
+          ExpenseRequestDto responseDto =
+            new ExpenseRequestDto(
+              2L,
+              userId,
+              new BigDecimal("100.00"),
+              "Sprzęt biurowy",
+              "f",
+              LocalDateTime.of(2026, 5, 13, 0, 0, 0),
+              LocalDateTime.now(),
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              null,
+              null,
+              null,
+              null);
+
+          when(expenseRequestService.createExpenseRequest(
+              eq(userId), any(CreateExpenseRequestDto.class)))
+            .thenReturn(responseDto);
+
+          String requestJson =
+            """
+            {
+            "amount": 100.00,
+            "category": "Sprzęt biurowy",
+            "description": "f",
+            "expenseDate": "2026-05-13"
+            }
+            """;
+
+          // when & then
+          mockMvc
+            .perform(
+              post("/api/users/{userId}/expense-requests", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.expenseDate").value("2026-05-13T00:00:00"));
+        }
   }
 
   @Nested
@@ -147,7 +200,7 @@ class ExpenseRequestControllerTest {
     @DisplayName("should return 200 OK with list of all expense requests sorted by submission date")
     void shouldReturn200WithExpenseRequestHistory() throws Exception {
       // given
-      Long userId = 2L;
+      String userId = "user-2";
 
       List<ExpenseRequestDto> historyDtos =
           List.of(
@@ -159,7 +212,11 @@ class ExpenseRequestControllerTest {
                   "Notebooks and pens",
                   LocalDateTime.of(2026, 2, 1, 9, 15, 0),
                   LocalDateTime.of(2026, 2, 2, 9, 15, 0),
-                  ExpenseRequestStatus.WAITING_FOR_APPROVAL),
+                  ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+                  null,
+                  null,
+                  null,
+                  null),
               new ExpenseRequestDto(
                   102L,
                   "user-2",
@@ -168,7 +225,11 @@ class ExpenseRequestControllerTest {
                   "Team lunch",
                   LocalDateTime.of(2026, 1, 20, 9, 15, 0),
                   LocalDateTime.of(2026, 1, 21, 14, 30, 0),
-                  ExpenseRequestStatus.WAITING_FOR_APPROVAL),
+                  ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+                  null,
+                  null,
+                  null,
+                  null),
               new ExpenseRequestDto(
                   101L,
                   "user-2",
@@ -177,7 +238,11 @@ class ExpenseRequestControllerTest {
                   "Flight to conference",
                   LocalDateTime.of(2026, 1, 15, 9, 15, 0),
                   LocalDateTime.of(2026, 1, 16, 10, 0, 0),
-                  ExpenseRequestStatus.WAITING_FOR_APPROVAL));
+                  ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+                  null,
+                  null,
+                  null,
+                  null));
 
       when(expenseRequestService.getExpenseRequestHistory(userId)).thenReturn(historyDtos);
 
@@ -198,7 +263,7 @@ class ExpenseRequestControllerTest {
     @DisplayName("should return 200 OK with empty list when user has no requests")
     void shouldReturn200WithEmptyListWhenNoRequests() throws Exception {
       // given
-      Long userId = 5L;
+      String userId = "user-5";
 
       when(expenseRequestService.getExpenseRequestHistory(userId)).thenReturn(List.of());
 

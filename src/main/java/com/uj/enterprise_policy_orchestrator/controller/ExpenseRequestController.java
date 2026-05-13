@@ -29,7 +29,13 @@ public class ExpenseRequestController {
   }
 
   @GetMapping
-  public List<ExpenseRequestDto> getExpenseRequestHistory(@PathVariable Long userId) {
+  public List<ExpenseRequestDto> getExpenseRequestHistory(@PathVariable String userId) {
     return expenseRequestService.getExpenseRequestHistory(userId);
+  }
+
+  @GetMapping("/{requestId}")
+  public ExpenseRequestDto getExpenseRequestById(
+      @PathVariable String userId, @PathVariable Long requestId) {
+    return expenseRequestService.getExpenseRequestById(userId, requestId);
   }
 }

@@ -31,6 +31,15 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
       @Param("amount") BigDecimal amount);
 
   @Query(
+      "SELECT p FROM Policy p "
+          + "WHERE p.startsAt <= :expenseDate "
+          + "AND (p.expiresAt IS NULL OR p.expiresAt >= :expenseDate) "
+          + "AND (p.minPrice IS NULL OR p.minPrice <= :amount) "
+          + "AND (p.maxPrice IS NULL OR p.maxPrice >= :amount)")
+  List<Policy> findByDateAndAmount(
+      @Param("expenseDate") LocalDateTime expenseDate, @Param("amount") BigDecimal amount);
+
+  @Query(
       "SELECT p FROM Policy p WHERE p.startsAt <= :now"
           + " AND (p.expiresAt IS NULL OR p.expiresAt > :now)")
   List<Policy> findActivePolicies(@Param("now") LocalDateTime now);

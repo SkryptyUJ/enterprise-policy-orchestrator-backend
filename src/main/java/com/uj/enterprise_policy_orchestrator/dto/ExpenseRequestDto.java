@@ -12,4 +12,8 @@ public record ExpenseRequestDto(
     String description,
     LocalDateTime expenseDate,
     LocalDateTime submittedAt,
-    ExpenseRequestStatus status) {}
+    ExpenseRequestStatus status,
+    PolicyDto appliedPolicy,
+    String decisionRationale,
+    String decidedBy,
+    LocalDateTime decidedAt) {}
