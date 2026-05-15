@@ -3,6 +3,7 @@ package com.uj.enterprise_policy_orchestrator.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -65,7 +66,11 @@ class ExpenseRequestControllerTest {
               "Business trip to Krakow – train tickets and hotel",
               LocalDateTime.of(2026, 3, 20, 0, 0, 0),
               submittedAt,
-              ExpenseRequestStatus.WAITING_FOR_APPROVAL);
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              null,
+              null,
+              null,
+              null);
 
       when(expenseRequestService.createExpenseRequest(
               eq(userId), any(CreateExpenseRequestDto.class)))
@@ -114,7 +119,11 @@ class ExpenseRequestControllerTest {
               "Pens",
               LocalDateTime.of(2026, 6, 15, 0, 0, 0),
               LocalDateTime.now(),
-              ExpenseRequestStatus.WAITING_FOR_APPROVAL);
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              null,
+              null,
+              null,
+              null);
 
       when(expenseRequestService.createExpenseRequest(
               eq(userId), any(CreateExpenseRequestDto.class)))
@@ -141,6 +150,51 @@ class ExpenseRequestControllerTest {
           .andExpect(jsonPath("$.amount").value(42.50))
           .andExpect(jsonPath("$.category").value("Office supplies"));
     }
+
+    @Test
+    @DisplayName("should accept expenseDate in yyyy-MM-dd format")
+    void shouldAcceptDateOnlyExpenseDateFormat() throws Exception {
+      // given
+      String userId = "user-789";
+
+      ExpenseRequestDto responseDto =
+          new ExpenseRequestDto(
+              2L,
+              userId,
+              new BigDecimal("100.00"),
+              "Sprzęt biurowy",
+              "f",
+              LocalDateTime.of(2026, 5, 13, 0, 0, 0),
+              LocalDateTime.now(),
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              null,
+              null,
+              null,
+              null);
+
+      when(expenseRequestService.createExpenseRequest(
+              eq(userId), any(CreateExpenseRequestDto.class)))
+          .thenReturn(responseDto);
+
+      String requestJson =
+          """
+            {
+            "amount": 100.00,
+            "category": "Sprzęt biurowy",
+            "description": "f",
+            "expenseDate": "2026-05-13"
+            }
+            """;
+
+      // when & then
+      mockMvc
+          .perform(
+              post("/api/users/{userId}/expense-requests", userId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(requestJson))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.expenseDate").value("2026-05-13T00:00:00"));
+    }
   }
 
   @Nested
@@ -151,7 +205,7 @@ class ExpenseRequestControllerTest {
     @DisplayName("should return 200 OK with list of all expense requests sorted by submission date")
     void shouldReturn200WithExpenseRequestHistory() throws Exception {
       // given
-      Long userId = 2L;
+      String userId = "user-2";
 
       List<ExpenseRequestDto> historyDtos =
           List.of(
@@ -163,7 +217,11 @@ class ExpenseRequestControllerTest {
                   "Notebooks and pens",
                   LocalDateTime.of(2026, 2, 1, 9, 15, 0),
                   LocalDateTime.of(2026, 2, 2, 9, 15, 0),
-                  ExpenseRequestStatus.WAITING_FOR_APPROVAL),
+                  ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+                  null,
+                  null,
+                  null,
+                  null),
               new ExpenseRequestDto(
                   102L,
                   "user-2",
@@ -172,7 +230,11 @@ class ExpenseRequestControllerTest {
                   "Team lunch",
                   LocalDateTime.of(2026, 1, 20, 9, 15, 0),
                   LocalDateTime.of(2026, 1, 21, 14, 30, 0),
-                  ExpenseRequestStatus.WAITING_FOR_APPROVAL),
+                  ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+                  null,
+                  null,
+                  null,
+                  null),
               new ExpenseRequestDto(
                   101L,
                   "user-2",
@@ -181,7 +243,11 @@ class ExpenseRequestControllerTest {
                   "Flight to conference",
                   LocalDateTime.of(2026, 1, 15, 9, 15, 0),
                   LocalDateTime.of(2026, 1, 16, 10, 0, 0),
-                  ExpenseRequestStatus.WAITING_FOR_APPROVAL));
+                  ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+                  null,
+                  null,
+                  null,
+                  null));
 
       when(expenseRequestService.getExpenseRequestHistory(userId)).thenReturn(historyDtos);
 
@@ -202,7 +268,7 @@ class ExpenseRequestControllerTest {
     @DisplayName("should return 200 OK with empty list when user has no requests")
     void shouldReturn200WithEmptyListWhenNoRequests() throws Exception {
       // given
-      Long userId = 5L;
+      String userId = "user-5";
 
       when(expenseRequestService.getExpenseRequestHistory(userId)).thenReturn(List.of());
 
@@ -340,6 +406,89 @@ class ExpenseRequestControllerTest {
           .andExpect(jsonPath("$.status").value("DECLINED"))
           .andExpect(jsonPath("$.selectedPolicyId").value(12))
           .andExpect(jsonPath("$.selectedPolicyRef").value("TRAVEL-EXT"));
+    }
+  }
+
+  @Nested
+  @DisplayName("DELETE /api/users/{userId}/expense-requests/{expenseRequestId}")
+  class CancelExpenseRequestEndpoint {
+
+    @Test
+    @DisplayName("should return 200 OK with cancelled expense request")
+    void shouldReturn200WithCancelledExpenseRequest() throws Exception {
+      // given
+      String userId = "user-123";
+      Long expenseRequestId = 100L;
+      LocalDateTime submittedAt = LocalDateTime.of(2026, 3, 23, 10, 30, 0);
+
+      ExpenseRequestDto cancelledDto =
+          new ExpenseRequestDto(
+              expenseRequestId,
+              userId,
+              new BigDecimal("1500.00"),
+              "Business travel",
+              "Business trip to Krakow – train tickets and hotel",
+              LocalDateTime.of(2026, 3, 20, 0, 0, 0),
+              submittedAt,
+              ExpenseRequestStatus.CANCELLED,
+              null,
+              null,
+              null,
+              null);
+
+      when(expenseRequestService.cancelExpenseRequest(userId, expenseRequestId))
+          .thenReturn(cancelledDto);
+
+      // when & then
+      mockMvc
+          .perform(
+              delete(
+                  "/api/users/{userId}/expense-requests/{expenseRequestId}",
+                  userId,
+                  expenseRequestId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(expenseRequestId))
+          .andExpect(jsonPath("$.userId").value(userId))
+          .andExpect(jsonPath("$.status").value("CANCELLED"))
+          .andExpect(jsonPath("$.amount").value(1500.00))
+          .andExpect(jsonPath("$.category").value("Business travel"));
+    }
+
+    @Test
+    @DisplayName("should delegate to service with correct parameters")
+    void shouldDelegateToServiceWithCorrectParameters() throws Exception {
+      // given
+      String userId = "user-456";
+      Long expenseRequestId = 42L;
+
+      ExpenseRequestDto cancelledDto =
+          new ExpenseRequestDto(
+              expenseRequestId,
+              userId,
+              new BigDecimal("250.00"),
+              "Office supplies",
+              "Pens and notebooks",
+              LocalDateTime.of(2026, 6, 15, 0, 0, 0),
+              LocalDateTime.now(),
+              ExpenseRequestStatus.CANCELLED,
+              null,
+              null,
+              null,
+              null);
+
+      when(expenseRequestService.cancelExpenseRequest(eq(userId), eq(expenseRequestId)))
+          .thenReturn(cancelledDto);
+
+      // when & then
+      mockMvc
+          .perform(
+              delete(
+                  "/api/users/{userId}/expense-requests/{expenseRequestId}",
+                  userId,
+                  expenseRequestId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(expenseRequestId))
+          .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
   }
 }

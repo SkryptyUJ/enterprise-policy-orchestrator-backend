@@ -115,6 +115,39 @@ class PolicyServiceTest {
       assertThat(saved.getName()).isEqualTo("Hardware Policy");
       assertThat(saved.getCategory()).isEqualTo("Travel");
     }
+
+    @Test
+    @DisplayName("should normalize policy category label on create")
+    void shouldNormalizePolicyCategoryOnCreate() {
+      String userId = "3";
+
+      CreatePolicyDto dto =
+          new CreatePolicyDto(
+              Optional.of("300"),
+              1,
+              "Office Policy",
+              "Office equipment",
+              LocalDateTime.of(2026, 5, 1, 0, 0, 0),
+              null,
+              new java.math.BigDecimal("100"),
+              new java.math.BigDecimal("2000"),
+              "Sprzet biurowy",
+              1);
+
+      when(policyRepository.save(any(Policy.class)))
+          .thenAnswer(
+              invocation -> {
+                Policy policy = invocation.getArgument(0);
+                policy.setId(3L);
+                return policy;
+              });
+
+      policyService.createPolicy(userId, dto);
+
+      ArgumentCaptor<Policy> captor = ArgumentCaptor.forClass(Policy.class);
+      verify(policyRepository, times(1)).save(captor.capture());
+      assertThat(captor.getValue().getCategory()).isEqualTo("1");
+    }
   }
 
   @Nested
@@ -163,6 +196,161 @@ class PolicyServiceTest {
       assertThatThrownBy(() -> policyService.getPolicyByPolicyId(missingPolicyId))
           .isInstanceOf(EntityNotFoundException.class)
           .hasMessageContaining("MISSING");
+    }
+
+    @Test
+    @DisplayName("should retrieve policy by numeric entity id")
+    void shouldRetrievePolicyByNumericEntityId() {
+      String identifier = "10";
+      LocalDateTime now = LocalDateTime.now();
+      Policy policy =
+          Policy.builder()
+              .id(10L)
+              .policyId("POL-10")
+              .authorUserId("5")
+              .categoryId(1)
+              .name("Test Policy")
+              .description("Test Description")
+              .version(1)
+              .createdAt(now)
+              .startsAt(now.plusDays(1))
+              .expiresAt(now.plusYears(1))
+              .minPrice(new java.math.BigDecimal("100"))
+              .maxPrice(new java.math.BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(2)
+              .build();
+
+      when(policyRepository.findById(10L)).thenReturn(Optional.of(policy));
+      when(policyRepository.findFirstByPolicyIdOrderByVersionDesc("POL-10"))
+          .thenReturn(Optional.of(policy));
+
+      PolicyDto result = policyService.getPolicyByPolicyId(identifier);
+
+      assertThat(result.id()).isEqualTo(10L);
+      assertThat(result.policyId()).isEqualTo("POL-10");
+    }
+
+    @Test
+    @DisplayName("should retrieve policy history using numeric entity id")
+    void shouldRetrievePolicyHistoryByNumericEntityId() {
+      String identifier = "11";
+      LocalDateTime now = LocalDateTime.now();
+
+      Policy entity =
+          Policy.builder()
+              .id(11L)
+              .policyId("HIST-11")
+              .authorUserId("1")
+              .categoryId(1)
+              .name("Policy v2")
+              .description("Latest")
+              .version(2)
+              .createdAt(now)
+              .startsAt(now.minusDays(1))
+              .expiresAt(null)
+              .minPrice(new java.math.BigDecimal("100"))
+              .maxPrice(new java.math.BigDecimal("1000"))
+              .category("Travel")
+              .authorizedRole(2)
+              .updatedAt(now)
+              .build();
+
+      Policy v2 = Policy.builder().id(11L).policyId("HIST-11").version(2).updatedAt(now).build();
+      Policy v1 =
+          Policy.builder()
+              .id(9L)
+              .policyId("HIST-11")
+              .version(1)
+              .updatedAt(now.minusDays(1))
+              .build();
+
+      when(policyRepository.findById(11L)).thenReturn(Optional.of(entity));
+      when(policyRepository.findByPolicyIdOrderByVersionDesc("HIST-11"))
+          .thenReturn(List.of(v2, v1));
+
+      List<PolicyDto> history = policyService.getPolicyHistory(identifier);
+
+      assertThat(history).hasSize(2);
+      assertThat(history.get(0).version()).isEqualTo(2);
+      assertThat(history.get(1).version()).isEqualTo(1);
+    }
+  }
+
+  @Nested
+  @DisplayName("Scenario 4: Listing policies")
+  class ListPolicies {
+
+    @Test
+    @DisplayName("should return only latest version per policyId")
+    void shouldReturnOnlyLatestVersionPerPolicyId() {
+      LocalDateTime now = LocalDateTime.now();
+
+      Policy v1 =
+          Policy.builder()
+              .id(1L)
+              .policyId("POL-1")
+              .name("Policy v1")
+              .version(1)
+              .updatedAt(now.minusDays(2))
+              .authorUserId("1")
+              .categoryId(1)
+              .description("old")
+              .createdAt(now.minusDays(2))
+              .startsAt(now.minusDays(2))
+              .expiresAt(null)
+              .minPrice(new java.math.BigDecimal("10"))
+              .maxPrice(new java.math.BigDecimal("100"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+
+      Policy v2 =
+          Policy.builder()
+              .id(2L)
+              .policyId("POL-1")
+              .name("Policy v2")
+              .version(2)
+              .updatedAt(now)
+              .authorUserId("1")
+              .categoryId(1)
+              .description("latest")
+              .createdAt(now.minusDays(1))
+              .startsAt(now.minusDays(1))
+              .expiresAt(null)
+              .minPrice(new java.math.BigDecimal("10"))
+              .maxPrice(new java.math.BigDecimal("200"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+
+      Policy other =
+          Policy.builder()
+              .id(3L)
+              .policyId("POL-2")
+              .name("Other")
+              .version(1)
+              .updatedAt(now.minusHours(1))
+              .authorUserId("2")
+              .categoryId(2)
+              .description("other")
+              .createdAt(now.minusHours(1))
+              .startsAt(now.minusHours(1))
+              .expiresAt(null)
+              .minPrice(new java.math.BigDecimal("5"))
+              .maxPrice(new java.math.BigDecimal("50"))
+              .category("Office")
+              .authorizedRole(2)
+              .build();
+
+      when(policyRepository.findAll()).thenReturn(List.of(v1, v2, other));
+
+      List<PolicyDto> result = policyService.getAllPolicies();
+
+      assertThat(result).hasSize(2);
+      assertThat(result.get(0).policyId()).isEqualTo("POL-1");
+      assertThat(result.get(0).version()).isEqualTo(2);
+      assertThat(result.get(1).policyId()).isEqualTo("POL-2");
     }
   }
 
@@ -544,6 +732,7 @@ class PolicyServiceTest {
               .categoryId(1)
               .name("Active Policy")
               .version(1)
+              .updatedAt(now)
               .createdAt(now)
               .startsAt(now.minusDays(10))
               .expiresAt(null)
@@ -558,6 +747,7 @@ class PolicyServiceTest {
               .categoryId(1)
               .name("Expired Policy")
               .version(1)
+              .updatedAt(now.minusDays(1))
               .createdAt(now.minusYears(2))
               .startsAt(now.minusYears(2))
               .expiresAt(now.minusDays(1))

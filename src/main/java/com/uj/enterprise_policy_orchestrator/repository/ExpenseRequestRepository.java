@@ -19,10 +19,10 @@ public interface ExpenseRequestRepository extends JpaRepository<ExpenseRequest, 
   //    @EntityGraph(attributePaths = "applicablePolicies")
   //    List<ExpenseRequest> findAll();
 
-  @EntityGraph(attributePaths = {"applicablePolicies", "resolutionPolicy"})
+  @EntityGraph(attributePaths = {"applicablePolicies", "resolutionPolicy", "appliedPolicy"})
   Optional<ExpenseRequest> findDetailedByIdAndUserId(Long id, String userId);
 
-  List<ExpenseRequest> findByUserId(Long userId);
+  List<ExpenseRequest> findByUserId(String userId);
 
-  List<ExpenseRequest> findByUserId(Long userId, Sort sort);
+  List<ExpenseRequest> findByUserId(String userId, Sort sort);
 }
