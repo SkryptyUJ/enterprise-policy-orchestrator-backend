@@ -30,7 +30,7 @@ public class ExpenseRequestController {
   }
 
   @GetMapping
-  public List<ExpenseRequestDto> getExpenseRequestHistory(@PathVariable Long userId) {
+  public List<ExpenseRequestDto> getExpenseRequestHistory(@PathVariable String userId) {
     return expenseRequestService.getExpenseRequestHistory(userId);
   }
 
@@ -39,5 +39,11 @@ public class ExpenseRequestController {
   public ExpenseRequestDto cancelExpenseRequest(
       @PathVariable String userId, @PathVariable Long expenseRequestId) {
     return expenseRequestService.cancelExpenseRequest(userId, expenseRequestId);
+  }
+
+  @GetMapping("/{requestId}")
+  public ExpenseRequestDto getExpenseRequestById(
+      @PathVariable String userId, @PathVariable Long requestId) {
+    return expenseRequestService.getExpenseRequestById(userId, requestId);
   }
 }

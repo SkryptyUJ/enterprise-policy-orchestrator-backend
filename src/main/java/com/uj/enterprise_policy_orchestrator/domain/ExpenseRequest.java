@@ -52,6 +52,19 @@ public class ExpenseRequest {
       inverseJoinColumns = @JoinColumn(name = "policy_id"))
   private final Set<Policy> applicablePolicies = new HashSet<>();
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "applied_policy_id")
+  private Policy appliedPolicy;
+
+  @Column(name = "decision_rationale", columnDefinition = "TEXT")
+  private String decisionRationale;
+
+  @Column(name = "decided_by")
+  private String decidedBy;
+
+  @Column(name = "decided_at")
+  private LocalDateTime decidedAt;
+
   @PrePersist
   protected void onCreate() {
     submittedAt = LocalDateTime.now();

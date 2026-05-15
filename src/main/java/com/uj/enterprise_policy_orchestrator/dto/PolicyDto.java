@@ -1,5 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -18,4 +19,11 @@ public record PolicyDto(
     BigDecimal minPrice,
     BigDecimal maxPrice,
     String category,
-    Integer authorizedRole) {}
+    Integer authorizedRole) {
+
+  @JsonProperty("active")
+  public boolean isActive() {
+    LocalDateTime now = LocalDateTime.now();
+    return !startsAt.isAfter(now) && (expiresAt == null || expiresAt.isAfter(now));
+  }
+}
