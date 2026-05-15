@@ -42,6 +42,11 @@ public class ExpenseRequestController {
     return expenseRequestService.cancelExpenseRequest(userId, expenseRequestId);
   }
 
+  @GetMapping("/history/all")
+  public List<ExpenseRequestHistoryDto> getUserExpenseRequestHistory(@PathVariable String userId) {
+    return expenseRequestService.getUserExpenseRequestHistory(userId);
+  }
+
   @GetMapping("/{requestId}")
   public ExpenseRequestDto getExpenseRequestById(
       @PathVariable String userId, @PathVariable Long requestId) {
@@ -52,10 +57,5 @@ public class ExpenseRequestController {
   public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(
       @PathVariable String userId, @PathVariable Long expenseRequestId) {
     return expenseRequestService.getExpenseRequestStatusHistory(expenseRequestId);
-  }
-
-  @GetMapping("/history/all")
-  public List<ExpenseRequestHistoryDto> getUserExpenseRequestHistory(@PathVariable String userId) {
-    return expenseRequestService.getUserExpenseRequestHistory(userId);
   }
 }

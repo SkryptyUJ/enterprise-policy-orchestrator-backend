@@ -11,6 +11,8 @@ import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestHistoryDto;
+import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import java.math.BigDecimal;
@@ -31,16 +33,19 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
   private final RestTemplate restTemplate = new RestTemplate();
   @Autowired private ExpenseRequestRepository expenseRequestRepository;
+  @Autowired private ExpenseRequestHistoryRepository expenseRequestHistoryRepository;
   @Autowired private PolicyRepository policyRepository;
 
   @BeforeEach
   void setUp() {
+    expenseRequestHistoryRepository.deleteAll();
     expenseRequestRepository.deleteAll();
     policyRepository.deleteAll();
   }
 
   @AfterEach
   void tearDown() {
+    expenseRequestHistoryRepository.deleteAll();
     expenseRequestRepository.deleteAll();
     policyRepository.deleteAll();
   }
@@ -1091,6 +1096,355 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals("Travel", savedRequest.getCategory());
       assertEquals("Conference registration", savedRequest.getDescription());
       assertEquals(LocalDateTime.of(2026, 6, 10, 0, 0, 0), savedRequest.getExpenseDate());
+    }
+  }
+
+  @Nested
+  @DisplayName(
+      "GET /api/users/{userId}/expense-requests/{expenseRequestId}/history - Get Request Status History")
+  class GetExpenseRequestStatusHistoryE2E {
+
+    @Test
+    @DisplayName("should retrieve status history for a specific expense request")
+    void shouldRetrieveStatusHistoryForSpecificRequest() {
+      String userId = "history-user-1";
+      LocalDateTime now = LocalDateTime.now();
+
+      // given - create a policy and an expense request
+      Policy policy =
+          Policy.builder()
+              .policyId("HISTORY-POLICY-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("History Test Policy")
+              .description("Policy for history testing")
+              .version(1)
+              .startsAt(now.minusMonths(1))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("1500.00"),
+              "Travel",
+              "History test request",
+              LocalDateTime.of(2026, 4, 20, 0, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      Long requestId = createResponse.getBody().id();
+
+      // when - retrieve status history
+      ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              ExpenseRequestHistoryDto[].class,
+              userId,
+              requestId);
+
+      // then - verify history was created with initial status
+      assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
+      assertNotNull(historyResponse.getBody());
+      ExpenseRequestHistoryDto[] historyEntries = historyResponse.getBody();
+      assertEquals(1, historyEntries.length);
+
+      ExpenseRequestHistoryDto initialHistory = historyEntries[0];
+      assertEquals(requestId, initialHistory.requestId());
+      assertEquals(userId, initialHistory.userId());
+      assertTrue(initialHistory.previousStatus() == null);
+      assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, initialHistory.newStatus());
+      assertEquals("Expense request created", initialHistory.changeReason());
+      assertNotNull(initialHistory.changedAt());
+    }
+
+    @Test
+    @DisplayName("should track history when expense request is cancelled")
+    void shouldTrackHistoryWhenRequestCancelled() {
+      String userId = "history-user-2";
+      LocalDateTime now = LocalDateTime.now();
+
+      // given - create policy and request
+      Policy policy =
+          Policy.builder()
+              .policyId("CANCEL-HISTORY-POLICY-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Cancel History Policy")
+              .description("Policy for cancel history testing")
+              .version(1)
+              .startsAt(now.minusMonths(1))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("800.00"),
+              "Travel",
+              "Request to cancel",
+              LocalDateTime.of(2026, 5, 1, 0, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      Long requestId = createResponse.getBody().id();
+
+      // when - cancel the request
+      restTemplate.exchange(
+          baseUrl() + "/api/users/{userId}/expense-requests/{requestId}",
+          org.springframework.http.HttpMethod.DELETE,
+          null,
+          ExpenseRequestDto.class,
+          userId,
+          requestId);
+
+      // then - retrieve history and verify cancellation was recorded
+      ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              ExpenseRequestHistoryDto[].class,
+              userId,
+              requestId);
+
+      ExpenseRequestHistoryDto[] historyEntries = historyResponse.getBody();
+      assertEquals(2, historyEntries.length);
+
+      // Most recent should be cancellation (Flyway sorts DESC by changedAt)
+      ExpenseRequestHistoryDto cancellationHistory = historyEntries[0];
+      assertEquals(requestId, cancellationHistory.requestId());
+      assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, cancellationHistory.previousStatus());
+      assertEquals(ExpenseRequestStatus.CANCELLED, cancellationHistory.newStatus());
+      assertEquals("Expense request cancelled by user", cancellationHistory.changeReason());
+    }
+
+    @Test
+    @DisplayName("should return empty list when no history exists for request")
+    void shouldReturnEmptyListWhenNoHistory() {
+      String userId = "history-user-3";
+      Long nonExistentRequestId = 99999L;
+
+      // when
+      ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              ExpenseRequestHistoryDto[].class,
+              userId,
+              nonExistentRequestId);
+
+      // then
+      assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
+      assertNotNull(historyResponse.getBody());
+      assertEquals(0, historyResponse.getBody().length);
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/users/{userId}/expense-requests/history/all - Get User Expense History")
+  class GetUserExpenseRequestHistoryE2E {
+
+    @Test
+    @DisplayName("should retrieve all history entries for a user across multiple requests")
+    void shouldRetrieveAllHistoryForUser() {
+      String userId = "all-history-user-1";
+      LocalDateTime now = LocalDateTime.now();
+
+      // given - create policy and multiple expense requests
+      Policy policy =
+          Policy.builder()
+              .policyId("ALL-HISTORY-POLICY-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("All History Policy")
+              .description("Policy for all history testing")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      // Create first request
+      CreateExpenseRequestDto request1 =
+          new CreateExpenseRequestDto(
+              new BigDecimal("500.00"),
+              "Travel",
+              "First request",
+              LocalDateTime.of(2026, 4, 1, 0, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> response1 =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              request1,
+              ExpenseRequestDto.class,
+              userId);
+      Long requestId1 = response1.getBody().id();
+
+      // Create second request
+      CreateExpenseRequestDto request2 =
+          new CreateExpenseRequestDto(
+              new BigDecimal("750.00"),
+              "Travel",
+              "Second request",
+              LocalDateTime.of(2026, 4, 15, 0, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> response2 =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              request2,
+              ExpenseRequestDto.class,
+              userId);
+      Long requestId2 = response2.getBody().id();
+
+      // Cancel the first request to add another history entry
+      restTemplate.exchange(
+          baseUrl() + "/api/users/{userId}/expense-requests/{requestId}",
+          org.springframework.http.HttpMethod.DELETE,
+          null,
+          ExpenseRequestDto.class,
+          userId,
+          requestId1);
+
+      // when - retrieve all history for user
+      ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/" + userId + "/expense-requests/history/all",
+              ExpenseRequestHistoryDto[].class);
+
+      // then - verify all history entries are returned
+      assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
+      assertNotNull(historyResponse.getBody());
+      ExpenseRequestHistoryDto[] historyEntries = historyResponse.getBody();
+      assertEquals(3, historyEntries.length); // 2 creations + 1 cancellation
+
+      // Verify all entries belong to the user
+      for (ExpenseRequestHistoryDto entry : historyEntries) {
+        assertEquals(userId, entry.userId());
+      }
+
+      // Verify entries from both requests are present
+      var request1Entries =
+          java.util.Arrays.stream(historyEntries)
+              .filter(e -> e.requestId().equals(requestId1))
+              .toList();
+      var request2Entries =
+          java.util.Arrays.stream(historyEntries)
+              .filter(e -> e.requestId().equals(requestId2))
+              .toList();
+
+      assertEquals(2, request1Entries.size()); // creation + cancellation
+      assertEquals(1, request2Entries.size()); // only creation
+    }
+
+    @Test
+    @DisplayName("should return empty list when user has no history")
+    void shouldReturnEmptyListWhenUserHasNoHistory() {
+      String userId = "all-history-user-2";
+
+      // when
+      ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/history/all",
+              ExpenseRequestHistoryDto[].class,
+              userId);
+
+      // then
+      assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
+      assertNotNull(historyResponse.getBody());
+      assertEquals(0, historyResponse.getBody().length);
+    }
+
+    @Test
+    @DisplayName("should isolate history between different users")
+    void shouldIsolateHistoryBetweenUsers() {
+      String user1 = "isolated-user-1";
+      String user2 = "isolated-user-2";
+      LocalDateTime now = LocalDateTime.now();
+
+      // given - create policy
+      Policy policy =
+          Policy.builder()
+              .policyId("ISOLATED-HISTORY-POLICY-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Isolated History Policy")
+              .description("Policy for isolation testing")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      // Create requests from different users
+      CreateExpenseRequestDto user1Request =
+          new CreateExpenseRequestDto(
+              new BigDecimal("600.00"),
+              "Travel",
+              "User 1 request",
+              LocalDateTime.of(2026, 4, 5, 0, 0, 0));
+
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/expense-requests",
+          user1Request,
+          ExpenseRequestDto.class,
+          user1);
+
+      CreateExpenseRequestDto user2Request =
+          new CreateExpenseRequestDto(
+              new BigDecimal("400.00"),
+              "Travel",
+              "User 2 request",
+              LocalDateTime.of(2026, 4, 10, 0, 0, 0));
+
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/expense-requests",
+          user2Request,
+          ExpenseRequestDto.class,
+          user2);
+
+      // when - retrieve history for each user
+      ResponseEntity<ExpenseRequestHistoryDto[]> user1HistoryResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/" + user1 + "/expense-requests/history/all",
+              ExpenseRequestHistoryDto[].class);
+
+      ResponseEntity<ExpenseRequestHistoryDto[]> user2HistoryResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/" + user2 + "/expense-requests/history/all",
+              ExpenseRequestHistoryDto[].class);
+
+      // then - verify each user only sees their own history
+      ExpenseRequestHistoryDto[] user1History = user1HistoryResponse.getBody();
+      ExpenseRequestHistoryDto[] user2History = user2HistoryResponse.getBody();
+
+      assertEquals(1, user1History.length);
+      assertEquals(1, user2History.length);
+      assertEquals(user1, user1History[0].userId());
+      assertEquals(user2, user2History[0].userId());
     }
   }
 }
