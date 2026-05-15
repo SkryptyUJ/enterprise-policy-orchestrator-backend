@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestHistoryDto;
 import com.uj.enterprise_policy_orchestrator.service.ExpenseRequestService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -356,6 +357,137 @@ class ExpenseRequestControllerTest {
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.id").value(expenseRequestId))
           .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/users/{userId}/expense-requests/{expenseRequestId}/history")
+  class GetExpenseRequestStatusHistoryEndpoint {
+
+    @Test
+    @DisplayName("should return 200 OK with the status history for the expense request")
+    void shouldReturnStatusHistory() throws Exception {
+      // given
+      String userId = "user123";
+      Long expenseRequestId = 1L;
+
+      LocalDateTime now = LocalDateTime.now();
+      ExpenseRequestHistoryDto history1 =
+          new ExpenseRequestHistoryDto(
+              1L,
+              expenseRequestId,
+              userId,
+              null,
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              now.minusDays(2),
+              "Expense request created");
+
+      ExpenseRequestHistoryDto history2 =
+          new ExpenseRequestHistoryDto(
+              2L,
+              expenseRequestId,
+              userId,
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              ExpenseRequestStatus.CANCELLED,
+              now.minusHours(1),
+              "Expense request cancelled by user");
+
+      when(expenseRequestService.getExpenseRequestStatusHistory(expenseRequestId))
+          .thenReturn(List.of(history2, history1));
+
+      // when & then
+      mockMvc
+          .perform(
+              get(
+                  "/api/users/{userId}/expense-requests/{expenseRequestId}/history",
+                  userId,
+                  expenseRequestId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
+          .andExpect(jsonPath("$[0].newStatus").value("CANCELLED"))
+          .andExpect(jsonPath("$[1].newStatus").value("WAITING_FOR_APPROVAL"));
+    }
+
+    @Test
+    @DisplayName("should return 200 OK with empty list when no history exists")
+    void shouldReturnEmptyHistoryList() throws Exception {
+      // given
+      String userId = "user123";
+      Long expenseRequestId = 999L;
+
+      when(expenseRequestService.getExpenseRequestStatusHistory(expenseRequestId))
+          .thenReturn(List.of());
+
+      // when & then
+      mockMvc
+          .perform(
+              get(
+                  "/api/users/{userId}/expense-requests/{expenseRequestId}/history",
+                  userId,
+                  expenseRequestId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(0)));
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/users/{userId}/expense-requests/history/all")
+  class GetUserExpenseRequestHistoryEndpoint {
+
+    @Test
+    @DisplayName("should return 200 OK with all status history for the user")
+    void shouldReturnAllUserHistory() throws Exception {
+      // given
+      String userId = "user123";
+      LocalDateTime now = LocalDateTime.now();
+
+      ExpenseRequestHistoryDto history1 =
+          new ExpenseRequestHistoryDto(
+              1L,
+              1L,
+              userId,
+              null,
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              now.minusDays(2),
+              "Expense request created");
+
+      ExpenseRequestHistoryDto history2 =
+          new ExpenseRequestHistoryDto(
+              2L,
+              1L,
+              userId,
+              ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+              ExpenseRequestStatus.CANCELLED,
+              now.minusHours(1),
+              "Expense request cancelled by user");
+
+      when(expenseRequestService.getUserExpenseRequestHistory(userId))
+          .thenReturn(List.of(history2, history1));
+
+      // when & then
+      mockMvc
+          .perform(get("/api/users/{userId}/expense-requests/history/all", userId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
+          .andExpect(
+              jsonPath(
+                  "$[*].userId",
+                  org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.equalTo(userId))));
+    }
+
+    @Test
+    @DisplayName("should return 200 OK with empty list when user has no history")
+    void shouldReturnEmptyHistoryListForUser() throws Exception {
+      // given
+      String userId = "userWithNoHistory";
+
+      when(expenseRequestService.getUserExpenseRequestHistory(userId)).thenReturn(List.of());
+
+      // when & then
+      mockMvc
+          .perform(get("/api/users/{userId}/expense-requests/history/all", userId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(0)));
     }
   }
 }

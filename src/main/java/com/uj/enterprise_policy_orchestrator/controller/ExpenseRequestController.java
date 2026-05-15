@@ -2,6 +2,7 @@ package com.uj.enterprise_policy_orchestrator.controller;
 
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestHistoryDto;
 import com.uj.enterprise_policy_orchestrator.service.ExpenseRequestService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -45,5 +46,16 @@ public class ExpenseRequestController {
   public ExpenseRequestDto getExpenseRequestById(
       @PathVariable String userId, @PathVariable Long requestId) {
     return expenseRequestService.getExpenseRequestById(userId, requestId);
+  }
+
+  @GetMapping("/{expenseRequestId}/history")
+  public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(
+      @PathVariable String userId, @PathVariable Long expenseRequestId) {
+    return expenseRequestService.getExpenseRequestStatusHistory(expenseRequestId);
+  }
+
+  @GetMapping("/history/all")
+  public List<ExpenseRequestHistoryDto> getUserExpenseRequestHistory(@PathVariable String userId) {
+    return expenseRequestService.getUserExpenseRequestHistory(userId);
   }
 }
