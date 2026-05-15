@@ -1,6 +1,10 @@
 package com.uj.enterprise_policy_orchestrator.integration;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
@@ -795,6 +799,298 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
       assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, response.getBody().status());
+    }
+  }
+
+  @Nested
+  @DisplayName(
+      "DELETE /api/users/{userId}/expense-requests/{expenseRequestId} - Cancel Expense Request")
+  class CancelExpenseRequestE2E {
+
+    @Test
+    @DisplayName("should successfully cancel a WAITING_FOR_APPROVAL expense request")
+    void shouldSuccessfullyCancelWaitingForApprovalRequest() {
+      // given
+      String userId = "cancel-user-1";
+
+      LocalDateTime policyStartsAt = LocalDateTime.of(2026, 1, 1, 0, 0, 0);
+      Policy policy =
+          Policy.builder()
+              .policyId("TRAVEL-POLICY-CANCEL-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Policy")
+              .description("Travel policy")
+              .version(1)
+              .startsAt(policyStartsAt)
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(2)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("1500.00"),
+              "Travel",
+              "Flight to Warsaw",
+              LocalDateTime.of(2026, 3, 20, 0, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
+      assertNotNull(createResponse.getBody());
+      Long expenseRequestId = createResponse.getBody().id();
+
+      // when
+      ResponseEntity<ExpenseRequestDto> cancelResponse =
+          restTemplate.exchange(
+              baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+              org.springframework.http.HttpMethod.DELETE,
+              null,
+              ExpenseRequestDto.class,
+              userId,
+              expenseRequestId);
+
+      // then
+      assertEquals(HttpStatus.OK, cancelResponse.getStatusCode());
+      assertNotNull(cancelResponse.getBody());
+      ExpenseRequestDto cancelledRequest = cancelResponse.getBody();
+      assertEquals(expenseRequestId, cancelledRequest.id());
+      assertEquals(userId, cancelledRequest.userId());
+      assertEquals(ExpenseRequestStatus.CANCELLED, cancelledRequest.status());
+      assertEquals(new BigDecimal("1500.00"), cancelledRequest.amount());
+      assertEquals("Travel", cancelledRequest.category());
+
+      // verify in database
+      ExpenseRequest savedRequest =
+          expenseRequestRepository.findById(expenseRequestId).orElse(null);
+      assertNotNull(savedRequest);
+      assertEquals(ExpenseRequestStatus.CANCELLED, savedRequest.getStatus());
+    }
+
+    @Test
+    @DisplayName("should return 400 when trying to cancel non-existent request")
+    void shouldReturn400WhenCancellingNonExistentRequest() {
+      // given
+      String userId = "cancel-user-2";
+      Long nonExistentId = 99999L;
+
+      // when & then
+      HttpClientErrorException exception =
+          assertThrows(
+              HttpClientErrorException.class,
+              () ->
+                  restTemplate.exchange(
+                      baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+                      org.springframework.http.HttpMethod.DELETE,
+                      null,
+                      ExpenseRequestDto.class,
+                      userId,
+                      nonExistentId));
+
+      assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("should prevent cancellation of request by different user")
+    void shouldPreventCancellationByDifferentUser() {
+      // given
+      String owner = "cancel-user-3";
+      String otherUser = "cancel-user-4";
+
+      LocalDateTime policyStartsAt = LocalDateTime.of(2026, 1, 1, 0, 0, 0);
+      Policy policy =
+          Policy.builder()
+              .policyId("TRAVEL-POLICY-CANCEL-002")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Policy")
+              .description("Travel policy")
+              .version(1)
+              .startsAt(policyStartsAt)
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(2)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("800.00"),
+              "Travel",
+              "Hotel accommodation",
+              LocalDateTime.of(2026, 4, 15, 0, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              owner);
+
+      assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
+      Long expenseRequestId = createResponse.getBody().id();
+
+      // when & then - attempt to cancel with different user
+      HttpClientErrorException exception =
+          assertThrows(
+              HttpClientErrorException.class,
+              () ->
+                  restTemplate.exchange(
+                      baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+                      org.springframework.http.HttpMethod.DELETE,
+                      null,
+                      ExpenseRequestDto.class,
+                      otherUser,
+                      expenseRequestId));
+
+      assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+
+      // verify original request is still in WAITING_FOR_APPROVAL status
+      ExpenseRequest savedRequest =
+          expenseRequestRepository.findById(expenseRequestId).orElse(null);
+      assertNotNull(savedRequest);
+      assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, savedRequest.getStatus());
+    }
+
+    @Test
+    @DisplayName("should prevent cancellation of already cancelled request")
+    void shouldPreventCancellationOfAlreadyCancelledRequest() {
+      // given
+      String userId = "cancel-user-5";
+
+      LocalDateTime policyStartsAt = LocalDateTime.of(2026, 1, 1, 0, 0, 0);
+      Policy policy =
+          Policy.builder()
+              .policyId("TRAVEL-POLICY-CANCEL-003")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Policy")
+              .description("Travel policy")
+              .version(1)
+              .startsAt(policyStartsAt)
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(2)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("600.00"),
+              "Travel",
+              "Car rental",
+              LocalDateTime.of(2026, 5, 1, 0, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      Long expenseRequestId = createResponse.getBody().id();
+
+      // first cancellation - should succeed
+      ResponseEntity<ExpenseRequestDto> firstCancel =
+          restTemplate.exchange(
+              baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+              org.springframework.http.HttpMethod.DELETE,
+              null,
+              ExpenseRequestDto.class,
+              userId,
+              expenseRequestId);
+
+      assertEquals(HttpStatus.OK, firstCancel.getStatusCode());
+      assertEquals(ExpenseRequestStatus.CANCELLED, firstCancel.getBody().status());
+
+      // second cancellation - should fail
+      HttpClientErrorException exception =
+          assertThrows(
+              HttpClientErrorException.class,
+              () ->
+                  restTemplate.exchange(
+                      baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+                      org.springframework.http.HttpMethod.DELETE,
+                      null,
+                      ExpenseRequestDto.class,
+                      userId,
+                      expenseRequestId));
+
+      assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("should persist cancelled request in database")
+    void shouldPersistCancelledRequestInDatabase() {
+      // given
+      String userId = "cancel-user-6";
+
+      LocalDateTime policyStartsAt = LocalDateTime.of(2026, 1, 1, 0, 0, 0);
+      Policy policy =
+          Policy.builder()
+              .policyId("TRAVEL-POLICY-CANCEL-004")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Policy")
+              .description("Travel policy")
+              .version(1)
+              .startsAt(policyStartsAt)
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(2)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("2000.00"),
+              "Travel",
+              "Conference registration",
+              LocalDateTime.of(2026, 6, 10, 0, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      Long expenseRequestId = createResponse.getBody().id();
+
+      // when
+      restTemplate.exchange(
+          baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+          org.springframework.http.HttpMethod.DELETE,
+          null,
+          ExpenseRequestDto.class,
+          userId,
+          expenseRequestId);
+
+      // then - verify in database
+      ExpenseRequest savedRequest =
+          expenseRequestRepository.findById(expenseRequestId).orElse(null);
+      assertNotNull(savedRequest);
+      assertEquals(ExpenseRequestStatus.CANCELLED, savedRequest.getStatus());
+      assertEquals(userId, savedRequest.getUserId());
+      assertEquals(new BigDecimal("2000.00"), savedRequest.getAmount());
+      assertEquals("Travel", savedRequest.getCategory());
+      assertEquals("Conference registration", savedRequest.getDescription());
+      assertEquals(LocalDateTime.of(2026, 6, 10, 0, 0, 0), savedRequest.getExpenseDate());
     }
   }
 }
