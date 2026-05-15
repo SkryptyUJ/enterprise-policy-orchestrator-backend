@@ -75,9 +75,7 @@ public class PolicyService {
     Policy policy =
         resolveLatestPolicy(policyId)
             .orElseThrow(
-                () ->
-                    new EntityNotFoundException(
-                        "Policy not found with identifier: " + policyId));
+                () -> new EntityNotFoundException("Policy not found with identifier: " + policyId));
     return toDto(policy);
   }
 
@@ -109,17 +107,17 @@ public class PolicyService {
         Comparator.comparing(Policy::getVersion).thenComparing(Policy::getUpdatedAt);
 
     Map<String, Policy> latestByPolicyId =
-      policyRepository.findAll().stream()
-        .collect(
-          Collectors.toMap(
-            Policy::getPolicyId,
-            Function.identity(),
-            BinaryOperator.maxBy(latestVersionComparator)));
+        policyRepository.findAll().stream()
+            .collect(
+                Collectors.toMap(
+                    Policy::getPolicyId,
+                    Function.identity(),
+                    BinaryOperator.maxBy(latestVersionComparator)));
 
     return latestByPolicyId.values().stream()
-      .sorted(Comparator.comparing(Policy::getUpdatedAt).reversed())
-      .map(this::toDto)
-      .toList();
+        .sorted(Comparator.comparing(Policy::getUpdatedAt).reversed())
+        .map(this::toDto)
+        .toList();
   }
 
   public List<PolicyDto> getActivePolicies() {
@@ -132,10 +130,10 @@ public class PolicyService {
       String category, LocalDateTime expenseDate, BigDecimal amount) {
     String normalizedCategory = ExpenseCategory.normalize(category);
     List<Policy> applicablePolicies =
-      policyRepository.findByCategoryAndDateAndAmount(normalizedCategory, expenseDate, amount);
+        policyRepository.findByCategoryAndDateAndAmount(normalizedCategory, expenseDate, amount);
 
     Comparator<Policy> latestVersionComparator =
-      Comparator.comparing(Policy::getVersion).thenComparing(Policy::getUpdatedAt);
+        Comparator.comparing(Policy::getVersion).thenComparing(Policy::getUpdatedAt);
 
     Map<String, Policy> latestByPolicyId =
         applicablePolicies.stream()
@@ -143,7 +141,7 @@ public class PolicyService {
                 Collectors.toMap(
                     Policy::getPolicyId,
                     Function.identity(),
-            BinaryOperator.maxBy(latestVersionComparator)));
+                    BinaryOperator.maxBy(latestVersionComparator)));
 
     return new HashSet<>(latestByPolicyId.values());
   }

@@ -9,8 +9,8 @@ import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
-import java.time.LocalTime;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -43,7 +43,8 @@ public class ExpenseRequestService {
     Set<Policy> applicablePolicies = findApplicablePolicies(request);
     if (applicablePolicies.isEmpty()) {
       request.setStatus(ExpenseRequestStatus.DECLINED);
-      throw new NoApplicablePoliciesException(buildNoMatchingPoliciesMessage(request, dto.category()));
+      throw new NoApplicablePoliciesException(
+          buildNoMatchingPoliciesMessage(request, dto.category()));
     }
 
     request.getApplicablePolicies().addAll(applicablePolicies);
@@ -59,7 +60,8 @@ public class ExpenseRequestService {
 
   private Set<Policy> findApplicablePolicies(ExpenseRequest exp) {
     LocalDateTime expenseDateForMatching = exp.getExpenseDate();
-    if (expenseDateForMatching != null && expenseDateForMatching.toLocalTime().equals(LocalTime.MIDNIGHT)) {
+    if (expenseDateForMatching != null
+        && expenseDateForMatching.toLocalTime().equals(LocalTime.MIDNIGHT)) {
       // Date-only input is deserialized to 00:00; match policies against the entire day.
       expenseDateForMatching = expenseDateForMatching.with(LocalTime.MAX);
     }
@@ -68,9 +70,11 @@ public class ExpenseRequestService {
         exp.getCategory(), expenseDateForMatching, exp.getAmount());
   }
 
-  private String buildNoMatchingPoliciesMessage(ExpenseRequest request, String requestedCategoryRaw) {
+  private String buildNoMatchingPoliciesMessage(
+      ExpenseRequest request, String requestedCategoryRaw) {
     LocalDateTime expenseDateForMatching = request.getExpenseDate();
-    if (expenseDateForMatching != null && expenseDateForMatching.toLocalTime().equals(LocalTime.MIDNIGHT)) {
+    if (expenseDateForMatching != null
+        && expenseDateForMatching.toLocalTime().equals(LocalTime.MIDNIGHT)) {
       expenseDateForMatching = expenseDateForMatching.with(LocalTime.MAX);
     }
 
@@ -84,7 +88,8 @@ public class ExpenseRequestService {
       return "Decline, no matching policies";
     }
 
-    String categoryForMessage = requestedCategoryRaw == null ? request.getCategory() : requestedCategoryRaw;
+    String categoryForMessage =
+        requestedCategoryRaw == null ? request.getCategory() : requestedCategoryRaw;
 
     return "Decline, no matching policies for category '"
         + categoryForMessage
@@ -103,6 +108,31 @@ public class ExpenseRequestService {
         .stream()
         .map(this::toDto)
         .toList();
+  }
+
+  @Transactional
+  public ExpenseRequestDto cancelExpenseRequest(String userId, Long expenseRequestId) {
+    ExpenseRequest request =
+        expenseRequestRepository
+            .findById(expenseRequestId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Expense request not found with id: " + expenseRequestId));
+
+    if (!request.getUserId().equals(userId)) {
+      throw new IllegalArgumentException("Expense request does not belong to user: " + userId);
+    }
+
+    if (request.getStatus() != ExpenseRequestStatus.WAITING_FOR_APPROVAL) {
+      throw new IllegalArgumentException(
+          "Expense request cannot be cancelled with status: " + request.getStatus());
+    }
+
+    request.setStatus(ExpenseRequestStatus.CANCELLED);
+    ExpenseRequest cancelled = expenseRequestRepository.save(request);
+
+    return toDto(cancelled);
   }
 
   @Transactional(readOnly = true)

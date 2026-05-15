@@ -15,7 +15,9 @@ public class CategoryController {
   @GetMapping
   public List<CategoryOptionDto> getCategories() {
     return Arrays.stream(ExpenseCategory.values())
-        .map(category -> new CategoryOptionDto(category.getId(), category.getValue(), category.getLabel()))
+        .map(
+            category ->
+                new CategoryOptionDto(category.getId(), category.getValue(), category.getLabel()))
         .toList();
   }
 }

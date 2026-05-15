@@ -19,11 +19,11 @@ public record PolicyDto(
     BigDecimal minPrice,
     BigDecimal maxPrice,
     String category,
-        Integer authorizedRole) {
+    Integer authorizedRole) {
 
-    @JsonProperty("active")
-    public boolean isActive() {
-        LocalDateTime now = LocalDateTime.now();
-        return !startsAt.isAfter(now) && (expiresAt == null || expiresAt.isAfter(now));
-    }
+  @JsonProperty("active")
+  public boolean isActive() {
+    LocalDateTime now = LocalDateTime.now();
+    return !startsAt.isAfter(now) && (expiresAt == null || expiresAt.isAfter(now));
+  }
 }

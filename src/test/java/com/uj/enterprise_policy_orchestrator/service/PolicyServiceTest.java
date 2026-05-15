@@ -222,7 +222,7 @@ class PolicyServiceTest {
               .build();
 
       when(policyRepository.findById(10L)).thenReturn(Optional.of(policy));
-        when(policyRepository.findFirstByPolicyIdOrderByVersionDesc("POL-10"))
+      when(policyRepository.findFirstByPolicyIdOrderByVersionDesc("POL-10"))
           .thenReturn(Optional.of(policy));
 
       PolicyDto result = policyService.getPolicyByPolicyId(identifier);
@@ -266,7 +266,8 @@ class PolicyServiceTest {
               .build();
 
       when(policyRepository.findById(11L)).thenReturn(Optional.of(entity));
-      when(policyRepository.findByPolicyIdOrderByVersionDesc("HIST-11")).thenReturn(List.of(v2, v1));
+      when(policyRepository.findByPolicyIdOrderByVersionDesc("HIST-11"))
+          .thenReturn(List.of(v2, v1));
 
       List<PolicyDto> history = policyService.getPolicyHistory(identifier);
 

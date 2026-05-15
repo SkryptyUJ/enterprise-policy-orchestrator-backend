@@ -56,7 +56,7 @@ class ExpenseRequestServiceTest {
               new BigDecimal("1500.00"),
               "Business travel",
               "Business trip to Krakow – train tickets and hotel",
-            LocalDateTime.of(2026, 3, 20, 10, 30, 0));
+              LocalDateTime.of(2026, 3, 20, 10, 30, 0));
 
       Policy policy =
           Policy.builder()
@@ -98,7 +98,7 @@ class ExpenseRequestServiceTest {
       assertThat(result.category()).isEqualTo("Business travel");
       assertThat(result.description())
           .isEqualTo("Business trip to Krakow – train tickets and hotel");
-        assertThat(result.expenseDate()).isEqualTo(LocalDateTime.of(2026, 3, 20, 10, 30, 0));
+      assertThat(result.expenseDate()).isEqualTo(LocalDateTime.of(2026, 3, 20, 10, 30, 0));
 
       // then — system automatically assigns submission timestamp
       assertThat(result.submittedAt()).isNotNull();
@@ -160,7 +160,7 @@ class ExpenseRequestServiceTest {
               new BigDecimal("89.99"),
               "Training",
               "Online Java course",
-            LocalDateTime.of(2026, 4, 1, 9, 15, 0));
+              LocalDateTime.of(2026, 4, 1, 9, 15, 0));
 
       Policy policy1 = Policy.builder().id(1L).policyId("POL-001").build();
       Policy policy2 = Policy.builder().id(2L).policyId("POL-002").build();
@@ -206,7 +206,7 @@ class ExpenseRequestServiceTest {
               new BigDecimal("100.00"),
               "Unknown",
               "No policy for this",
-            LocalDateTime.of(2026, 1, 1, 11, 0, 0));
+              LocalDateTime.of(2026, 1, 1, 11, 0, 0));
 
       when(policyService.findApplicablePolicies(
               "Unknown", LocalDateTime.of(2026, 1, 1, 11, 0, 0), new BigDecimal("100.00")))
@@ -383,7 +383,7 @@ class ExpenseRequestServiceTest {
               new BigDecimal("10000.00"),
               "Luxury",
               "Expensive item",
-            LocalDateTime.of(2026, 1, 1, 11, 0, 0));
+              LocalDateTime.of(2026, 1, 1, 11, 0, 0));
 
       when(policyService.findApplicablePolicies(
               "Luxury", LocalDateTime.of(2026, 1, 1, 11, 0, 0), new BigDecimal("10000.00")))
@@ -625,6 +625,208 @@ class ExpenseRequestServiceTest {
       // when & then — system returns empty list for non-existent user
       var result = expenseRequestService.getExpenseRequestHistory(nonExistentUserId);
       assertThat(result).isEmpty();
+    }
+  }
+
+  @Nested
+  @DisplayName("Scenario 3: Employee cancels an expense request")
+  class CancelExpenseRequest {
+
+    @Test
+    @DisplayName("should successfully cancel a WAITING_FOR_APPROVAL expense request")
+    void shouldSuccessfullyCancelWaitingForApprovalRequest() {
+      // given — employee has submitted an expense request in WAITING_FOR_APPROVAL status
+      String userId = "user-123";
+      Long expenseRequestId = 100L;
+
+      ExpenseRequest existingRequest =
+          ExpenseRequest.builder()
+              .id(expenseRequestId)
+              .userId(userId)
+              .amount(new BigDecimal("1500.00"))
+              .category("Business travel")
+              .description("Business trip to Krakow")
+              .expenseDate(LocalDateTime.of(2026, 3, 20, 0, 0, 0))
+              .submittedAt(LocalDateTime.now())
+              .status(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
+              .build();
+
+      when(expenseRequestRepository.findById(expenseRequestId))
+          .thenReturn(java.util.Optional.of(existingRequest));
+
+      when(expenseRequestRepository.save(any(ExpenseRequest.class)))
+          .thenAnswer(
+              invocation -> {
+                ExpenseRequest req = invocation.getArgument(0);
+                req.setStatus(ExpenseRequestStatus.CANCELLED);
+                return req;
+              });
+
+      // when — employee cancels the request
+      ExpenseRequestDto result =
+          expenseRequestService.cancelExpenseRequest(userId, expenseRequestId);
+
+      // then — request status changes to CANCELLED
+      assertThat(result.status()).isEqualTo(ExpenseRequestStatus.CANCELLED);
+      assertThat(result.id()).isEqualTo(expenseRequestId);
+      assertThat(result.userId()).isEqualTo(userId);
+    }
+
+    @Test
+    @DisplayName("should persist the cancelled request in the database")
+    void shouldPersistCancelledRequestInDatabase() {
+      // given
+      String userId = "user-456";
+      Long expenseRequestId = 50L;
+
+      ExpenseRequest existingRequest =
+          ExpenseRequest.builder()
+              .id(expenseRequestId)
+              .userId(userId)
+              .amount(new BigDecimal("250.00"))
+              .category("Office supplies")
+              .description("Printer toner")
+              .expenseDate(LocalDateTime.of(2026, 5, 10, 0, 0, 0))
+              .submittedAt(LocalDateTime.now())
+              .status(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
+              .build();
+
+      when(expenseRequestRepository.findById(expenseRequestId))
+          .thenReturn(java.util.Optional.of(existingRequest));
+
+      when(expenseRequestRepository.save(any(ExpenseRequest.class)))
+          .thenAnswer(
+              invocation -> {
+                ExpenseRequest req = invocation.getArgument(0);
+                req.setStatus(ExpenseRequestStatus.CANCELLED);
+                return req;
+              });
+
+      // when
+      expenseRequestService.cancelExpenseRequest(userId, expenseRequestId);
+
+      // then — request is persisted with CANCELLED status
+      ArgumentCaptor<ExpenseRequest> captor = ArgumentCaptor.forClass(ExpenseRequest.class);
+      verify(expenseRequestRepository, times(1)).save(captor.capture());
+
+      ExpenseRequest saved = captor.getValue();
+      assertThat(saved.getStatus()).isEqualTo(ExpenseRequestStatus.CANCELLED);
+      assertThat(saved.getId()).isEqualTo(expenseRequestId);
+    }
+
+    @Test
+    @DisplayName("should throw exception when request does not exist")
+    void shouldThrowWhenRequestNotFound() {
+      // given
+      String userId = "user-789";
+      Long nonExistentRequestId = 999L;
+
+      when(expenseRequestRepository.findById(nonExistentRequestId))
+          .thenReturn(java.util.Optional.empty());
+
+      // when & then
+      assertThatThrownBy(
+              () -> expenseRequestService.cancelExpenseRequest(userId, nonExistentRequestId))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessage("Expense request not found with id: " + nonExistentRequestId);
+
+      // then — verify that save was not called
+      verify(expenseRequestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("should throw exception when request belongs to different user")
+    void shouldThrowWhenRequestBelongsToDifferentUser() {
+      // given
+      String requestingUserId = "user-123";
+      String ownerUserId = "user-other";
+      Long expenseRequestId = 100L;
+
+      ExpenseRequest existingRequest =
+          ExpenseRequest.builder()
+              .id(expenseRequestId)
+              .userId(ownerUserId)
+              .amount(new BigDecimal("1500.00"))
+              .category("Business travel")
+              .description("Business trip")
+              .expenseDate(LocalDateTime.of(2026, 3, 20, 0, 0, 0))
+              .submittedAt(LocalDateTime.now())
+              .status(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
+              .build();
+
+      when(expenseRequestRepository.findById(expenseRequestId))
+          .thenReturn(java.util.Optional.of(existingRequest));
+
+      // when & then
+      assertThatThrownBy(
+              () -> expenseRequestService.cancelExpenseRequest(requestingUserId, expenseRequestId))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessage("Expense request does not belong to user: " + requestingUserId);
+
+      // then — verify that save was not called
+      verify(expenseRequestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("should throw exception when trying to cancel a DECLINED request")
+    void shouldThrowWhenCancellingDeclinedRequest() {
+      // given
+      String userId = "user-123";
+      Long expenseRequestId = 100L;
+
+      ExpenseRequest declaredRequest =
+          ExpenseRequest.builder()
+              .id(expenseRequestId)
+              .userId(userId)
+              .amount(new BigDecimal("1500.00"))
+              .category("Business travel")
+              .description("Business trip")
+              .expenseDate(LocalDateTime.of(2026, 3, 20, 0, 0, 0))
+              .submittedAt(LocalDateTime.now())
+              .status(ExpenseRequestStatus.DECLINED)
+              .build();
+
+      when(expenseRequestRepository.findById(expenseRequestId))
+          .thenReturn(java.util.Optional.of(declaredRequest));
+
+      // when & then
+      assertThatThrownBy(() -> expenseRequestService.cancelExpenseRequest(userId, expenseRequestId))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessage("Expense request cannot be cancelled with status: DECLINED");
+
+      // then — verify that save was not called
+      verify(expenseRequestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("should throw exception when trying to cancel an already CANCELLED request")
+    void shouldThrowWhenCancellingAlreadyCancelledRequest() {
+      // given
+      String userId = "user-123";
+      Long expenseRequestId = 100L;
+
+      ExpenseRequest cancelledRequest =
+          ExpenseRequest.builder()
+              .id(expenseRequestId)
+              .userId(userId)
+              .amount(new BigDecimal("1500.00"))
+              .category("Business travel")
+              .description("Business trip")
+              .expenseDate(LocalDateTime.of(2026, 3, 20, 0, 0, 0))
+              .submittedAt(LocalDateTime.now())
+              .status(ExpenseRequestStatus.CANCELLED)
+              .build();
+
+      when(expenseRequestRepository.findById(expenseRequestId))
+          .thenReturn(java.util.Optional.of(cancelledRequest));
+
+      // when & then
+      assertThatThrownBy(() -> expenseRequestService.cancelExpenseRequest(userId, expenseRequestId))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessage("Expense request cannot be cancelled with status: CANCELLED");
+
+      // then — verify that save was not called
+      verify(expenseRequestRepository, never()).save(any());
     }
   }
 }
