@@ -53,6 +53,10 @@ public class ExpenseRequest {
   private final Set<Policy> applicablePolicies = new HashSet<>();
 
   @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "resolution_policy_id")
+  private Policy resolutionPolicy;
+
+  @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "applied_policy_id")
   private Policy appliedPolicy;
 
