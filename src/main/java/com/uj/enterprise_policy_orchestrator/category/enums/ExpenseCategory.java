@@ -1,4 +1,4 @@
-package com.uj.enterprise_policy_orchestrator.domain.enums;
+package com.uj.enterprise_policy_orchestrator.category.enums;
 
 import java.text.Normalizer;
 import java.util.HashMap;

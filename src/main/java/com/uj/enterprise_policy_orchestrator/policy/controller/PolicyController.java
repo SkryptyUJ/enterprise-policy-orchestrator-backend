@@ -1,9 +1,9 @@
-package com.uj.enterprise_policy_orchestrator.controller;
+package com.uj.enterprise_policy_orchestrator.policy.controller;
 
-import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
-import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
-import com.uj.enterprise_policy_orchestrator.dto.SetPolicyExpirationDto;
-import com.uj.enterprise_policy_orchestrator.service.PolicyService;
+import com.uj.enterprise_policy_orchestrator.policy.dto.CreatePolicyDto;
+import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
+import com.uj.enterprise_policy_orchestrator.policy.dto.SetPolicyExpirationDto;
+import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

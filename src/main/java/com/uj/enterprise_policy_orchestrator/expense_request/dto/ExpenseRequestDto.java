@@ -1,6 +1,7 @@
-package com.uj.enterprise_policy_orchestrator.dto;
+package com.uj.enterprise_policy_orchestrator.expense_request.dto;
 
-import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 

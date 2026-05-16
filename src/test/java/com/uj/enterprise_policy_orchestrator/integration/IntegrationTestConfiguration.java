@@ -1,8 +1,10 @@
 package com.uj.enterprise_policy_orchestrator.integration;
 
+import java.net.http.HttpClient;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 
@@ -21,6 +23,6 @@ class IntegrationTestConfiguration {
 
   @Bean
   public RestTemplate restTemplate() {
-    return new RestTemplate();
+    return new RestTemplate(new JdkClientHttpRequestFactory(HttpClient.newHttpClient()));
   }
 }

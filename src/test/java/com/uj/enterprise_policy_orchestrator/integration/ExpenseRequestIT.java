@@ -6,22 +6,26 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
-import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
-import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
-import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
-import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
+import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequest;
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.expense_request.repository.ExpenseRequestRepository;
+import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -29,9 +33,9 @@ import org.springframework.web.client.RestTemplate;
 @DisplayName("ExpenseRequest Controller E2E Tests")
 class ExpenseRequestIT extends AbstractIntegrationTest {
 
-  private final RestTemplate restTemplate = new RestTemplate();
   @Autowired private ExpenseRequestRepository expenseRequestRepository;
   @Autowired private PolicyRepository policyRepository;
+  @Autowired private RestTemplate restTemplate;
 
   @BeforeEach
   void setUp() {
@@ -286,13 +290,15 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               "Multi-policy test",
               LocalDateTime.of(2026, 3, 20, 0, 0, 0));
 
-      ResponseEntity<ExpenseRequestDto> response =
-          restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
-
+      assertEquals(
+          HttpStatus.CREATED,
+          restTemplate
+              .postForEntity(
+                  baseUrl() + "/api/users/{userId}/expense-requests",
+                  createRequest,
+                  ExpenseRequestDto.class,
+                  userId)
+              .getStatusCode());
       var expenseRequests = expenseRequestRepository.findAllWithApplicablePolicies();
       assertEquals(1, expenseRequests.size());
       var savedRequest = expenseRequests.getFirst();
@@ -462,13 +468,15 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(amount, "Travel", description, expenseDate);
 
-      ResponseEntity<ExpenseRequestDto> response =
-          restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
-
+      assertEquals(
+          HttpStatus.CREATED,
+          restTemplate
+              .postForEntity(
+                  baseUrl() + "/api/users/{userId}/expense-requests",
+                  createRequest,
+                  ExpenseRequestDto.class,
+                  userId)
+              .getStatusCode());
       var expenseRequests = expenseRequestRepository.findAllWithApplicablePolicies();
       assertEquals(1, expenseRequests.size());
       var savedRequest = expenseRequests.getFirst();
@@ -476,6 +484,300 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals(0, savedRequest.getAmount().compareTo(amount));
       assertEquals("Travel", savedRequest.getCategory());
       assertEquals(expenseDate, savedRequest.getExpenseDate());
+    }
+
+    @Test
+    @DisplayName(
+        "should create expense request from a date-only JSON payload and normalize category")
+    void shouldCreateExpenseRequestFromDateOnlyJsonPayloadAndNormalizeCategory()
+        throws InterruptedException {
+      String userId = "expense-user-json";
+
+      LocalDateTime policyStartsAt = LocalDateTime.of(2026, 3, 20, 0, 0, 0);
+      Policy policy =
+          Policy.builder()
+              .policyId("JSON-POLICY-001")
+              .authorUserId("admin")
+              .categoryId(2)
+              .name("Localized Category Policy")
+              .description("Policy used for JSON parsing coverage")
+              .version(1)
+              .startsAt(policyStartsAt)
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("2")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_JSON);
+
+      String jsonBody =
+          """
+          {"amount":1500.00,"category":"Podroze sluzbowe","description":"Flight to Krakow","expenseDate":"2026-03-20"}
+          """;
+
+      ResponseEntity<ExpenseRequestDto> response =
+          restTemplate.exchange(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              org.springframework.http.HttpMethod.POST,
+              new HttpEntity<>(jsonBody, headers),
+              ExpenseRequestDto.class,
+              userId);
+
+      assertEquals(HttpStatus.CREATED, response.getStatusCode());
+      assertNotNull(response.getBody());
+      assertEquals("2", response.getBody().category());
+      assertEquals(LocalDateTime.of(2026, 3, 20, 0, 0, 0), response.getBody().expenseDate());
+      assertNotNull(response.getBody().submittedAt());
+
+      var savedRequest = expenseRequestRepository.findAllWithApplicablePolicies().getFirst();
+      assertEquals("2", savedRequest.getCategory());
+      assertEquals(LocalDateTime.of(2026, 3, 20, 0, 0, 0), savedRequest.getExpenseDate());
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/users/{userId}/expense-requests - Get Expense Request History")
+  class GetExpenseRequestHistoryE2E {
+
+    @Test
+    @DisplayName("should return expense request history sorted by submittedAt descending")
+    void shouldReturnExpenseRequestHistorySortedBySubmittedAtDescending()
+        throws InterruptedException {
+      String userId = "history-user-1";
+
+      Policy policy =
+          Policy.builder()
+              .policyId("HISTORY-POLICY-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("History Policy")
+              .description("Policy for history endpoint coverage")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("10"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto request1 =
+          new CreateExpenseRequestDto(
+              new BigDecimal("100.00"),
+              "Travel",
+              "Request 1",
+              LocalDateTime.of(2026, 3, 20, 10, 0, 0));
+      CreateExpenseRequestDto request2 =
+          new CreateExpenseRequestDto(
+              new BigDecimal("200.00"),
+              "Travel",
+              "Request 2",
+              LocalDateTime.of(2026, 3, 21, 10, 0, 0));
+      CreateExpenseRequestDto request3 =
+          new CreateExpenseRequestDto(
+              new BigDecimal("300.00"),
+              "Travel",
+              "Request 3",
+              LocalDateTime.of(2026, 3, 22, 10, 0, 0));
+
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/expense-requests",
+          request1,
+          ExpenseRequestDto.class,
+          userId);
+      Thread.sleep(20);
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/expense-requests",
+          request2,
+          ExpenseRequestDto.class,
+          userId);
+      Thread.sleep(20);
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/expense-requests",
+          request3,
+          ExpenseRequestDto.class,
+          userId);
+
+      ResponseEntity<ExpenseRequestDto[]> response =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              ExpenseRequestDto[].class,
+              userId);
+
+      assertEquals(HttpStatus.OK, response.getStatusCode());
+      ExpenseRequestDto[] history = response.getBody();
+      assertNotNull(history);
+      assertEquals(3, history.length);
+      assertTrue(history[0].submittedAt().isAfter(history[1].submittedAt()));
+      assertTrue(history[1].submittedAt().isAfter(history[2].submittedAt()));
+      assertEquals("Request 3", history[0].description());
+      assertEquals("Request 2", history[1].description());
+      assertEquals("Request 1", history[2].description());
+    }
+  }
+
+  @Nested
+  @DisplayName("GET /api/users/{userId}/expense-requests/{requestId} - Get Expense Request By Id")
+  class GetExpenseRequestByIdE2E {
+
+    @Test
+    @DisplayName("should return expense request details for the owning user")
+    void shouldReturnExpenseRequestForOwningUser() {
+      String userId = "request-by-id-user";
+
+      Policy policy =
+          Policy.builder()
+              .policyId("REQUEST-BY-ID-POLICY-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Request By Id Policy")
+              .description("Policy for get-by-id coverage")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("10"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("250.00"),
+              "Travel",
+              "Conference taxi",
+              LocalDateTime.of(2026, 4, 1, 8, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
+
+      ResponseEntity<ExpenseRequestDto> response =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}",
+              ExpenseRequestDto.class,
+              userId,
+              requestId);
+
+      assertEquals(HttpStatus.OK, response.getStatusCode());
+      assertNotNull(response.getBody());
+      assertEquals(requestId, response.getBody().id());
+      assertEquals(userId, response.getBody().userId());
+      assertEquals("Conference taxi", response.getBody().description());
+    }
+
+    @Test
+    @DisplayName("should return 404 when a different user requests the expense request")
+    void shouldReturn404ForDifferentUser() {
+      String userId = "request-by-id-owner";
+      String otherUserId = "request-by-id-other";
+
+      Policy policy =
+          Policy.builder()
+              .policyId("REQUEST-BY-ID-POLICY-002")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Request By Id Policy")
+              .description("Policy for get-by-id negative coverage")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("10"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("250.00"),
+              "Travel",
+              "Conference taxi",
+              LocalDateTime.of(2026, 4, 1, 8, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
+
+      HttpClientErrorException.NotFound exception =
+          assertThrows(
+              HttpClientErrorException.NotFound.class,
+              () ->
+                  restTemplate.getForEntity(
+                      baseUrl() + "/api/users/{userId}/expense-requests/{requestId}",
+                      ExpenseRequestDto.class,
+                      otherUserId,
+                      requestId));
+
+      assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+      assertTrue(exception.getResponseBodyAsString().contains("Expense request not found"));
+    }
+  }
+
+  @Nested
+  @DisplayName("Error handling and policy matching edge cases")
+  class ErrorHandlingEdgeCases {
+
+    @Test
+    @DisplayName(
+        "should expose available categories when the date and amount match but category does not")
+    void shouldExposeAvailableCategoriesWhenOnlyCategoryDiffers() {
+      String userId = "category-mismatch-user";
+
+      Policy policy =
+          Policy.builder()
+              .policyId("AVAILABLE-CATEGORY-POLICY-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Policy")
+              .description("Policy used for category mismatch coverage")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("1500.00"),
+              "Meals",
+              "Lunch outside the policy category",
+              LocalDateTime.of(2026, 3, 20, 12, 0, 0));
+
+      HttpClientErrorException.BadRequest exception =
+          assertThrows(
+              HttpClientErrorException.BadRequest.class,
+              () ->
+                  restTemplate.postForEntity(
+                      baseUrl() + "/api/users/{userId}/expense-requests",
+                      createRequest,
+                      ExpenseRequestDto.class,
+                      userId));
+
+      assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+      assertTrue(exception.getResponseBodyAsString().contains("Meals"));
+      assertTrue(exception.getResponseBodyAsString().contains("Travel"));
     }
   }
 
@@ -847,6 +1149,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
       assertNotNull(createResponse.getBody());
+      assertNotNull(createResponse.getBody());
       Long expenseRequestId = createResponse.getBody().id();
 
       // when
@@ -939,7 +1242,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               owner);
 
       assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
-      Long expenseRequestId = createResponse.getBody().id();
+      ExpenseRequestDto createdRequest = Objects.requireNonNull(createResponse.getBody());
+      Long expenseRequestId = createdRequest.id();
 
       // when & then - attempt to cancel with different user
       HttpClientErrorException exception =
@@ -1001,7 +1305,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               ExpenseRequestDto.class,
               userId);
 
-      Long expenseRequestId = createResponse.getBody().id();
+      ExpenseRequestDto createdRequest = Objects.requireNonNull(createResponse.getBody());
+      Long expenseRequestId = createdRequest.id();
 
       // first cancellation - should succeed
       ResponseEntity<ExpenseRequestDto> firstCancel =
@@ -1014,7 +1319,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               expenseRequestId);
 
       assertEquals(HttpStatus.OK, firstCancel.getStatusCode());
-      assertEquals(ExpenseRequestStatus.CANCELLED, firstCancel.getBody().status());
+      ExpenseRequestDto cancelledRequest = Objects.requireNonNull(firstCancel.getBody());
+      assertEquals(ExpenseRequestStatus.CANCELLED, cancelledRequest.status());
 
       // second cancellation - should fail
       HttpClientErrorException exception =
@@ -1070,7 +1376,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               ExpenseRequestDto.class,
               userId);
 
-      Long expenseRequestId = createResponse.getBody().id();
+      ExpenseRequestDto createdRequest = Objects.requireNonNull(createResponse.getBody());
+      Long expenseRequestId = createdRequest.id();
 
       // when
       restTemplate.exchange(

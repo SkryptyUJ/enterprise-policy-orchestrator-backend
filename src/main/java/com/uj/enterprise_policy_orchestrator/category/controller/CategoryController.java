@@ -1,7 +1,7 @@
-package com.uj.enterprise_policy_orchestrator.controller;
+package com.uj.enterprise_policy_orchestrator.category.controller;
 
-import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseCategory;
-import com.uj.enterprise_policy_orchestrator.dto.CategoryOptionDto;
+import com.uj.enterprise_policy_orchestrator.category.dto.CategoryOptionDto;
+import com.uj.enterprise_policy_orchestrator.category.enums.ExpenseCategory;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;

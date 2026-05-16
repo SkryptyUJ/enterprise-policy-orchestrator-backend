@@ -8,9 +8,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
-import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
-import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
+import com.uj.enterprise_policy_orchestrator.policy.dto.CreatePolicyDto;
+import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
+import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
+import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;

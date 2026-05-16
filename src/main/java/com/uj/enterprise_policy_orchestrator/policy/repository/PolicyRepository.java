@@ -1,4 +1,4 @@
-package com.uj.enterprise_policy_orchestrator.repository;
+package com.uj.enterprise_policy_orchestrator.policy.repository;
 
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import java.math.BigDecimal;
