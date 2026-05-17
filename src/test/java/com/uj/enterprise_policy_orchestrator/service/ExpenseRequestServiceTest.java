@@ -9,11 +9,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
+import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequestHistory;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestHistoryDto;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
+import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
 import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import java.math.BigDecimal;
@@ -36,6 +39,7 @@ import org.springframework.data.domain.Sort;
 class ExpenseRequestServiceTest {
 
   @Mock private ExpenseRequestRepository expenseRequestRepository;
+  @Mock private ExpenseRequestHistoryRepository expenseRequestHistoryRepository;
   @Mock private PolicyRepository policyRepository;
   @Mock private PolicyService policyService;
   @InjectMocks private ExpenseRequestService expenseRequestService;
@@ -827,6 +831,117 @@ class ExpenseRequestServiceTest {
 
       // then — verify that save was not called
       verify(expenseRequestRepository, never()).save(any());
+    }
+  }
+
+  @Nested
+  @DisplayName("Scenario 4: Retrieving expense request history")
+  class GetExpenseRequestStatusHistory {
+
+    @Test
+    @DisplayName("should retrieve status history for a specific expense request")
+    void shouldGetExpenseRequestStatusHistory() {
+      // given
+      Long requestId = 1L;
+      LocalDateTime now = LocalDateTime.now();
+
+      ExpenseRequestHistory history1 =
+          ExpenseRequestHistory.builder()
+              .id(1L)
+              .requestId(requestId)
+              .userId("user123")
+              .previousStatus(null)
+              .newStatus(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
+              .changedAt(now.minusDays(2))
+              .changeReason("Expense request created")
+              .build();
+
+      ExpenseRequestHistory history2 =
+          ExpenseRequestHistory.builder()
+              .id(2L)
+              .requestId(requestId)
+              .userId("user123")
+              .previousStatus(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
+              .newStatus(ExpenseRequestStatus.CANCELLED)
+              .changedAt(now.minusHours(1))
+              .changeReason("Expense request cancelled by user")
+              .build();
+
+      when(expenseRequestHistoryRepository.findByRequestId(
+              requestId, Sort.by(Sort.Direction.DESC, "changedAt")))
+          .thenReturn(List.of(history2, history1));
+
+      // when
+      List<ExpenseRequestHistoryDto> result =
+          expenseRequestService.getExpenseRequestStatusHistory(requestId);
+
+      // then
+      assertThat(result).hasSize(2);
+      assertThat(result.get(0).newStatus()).isEqualTo(ExpenseRequestStatus.CANCELLED);
+      assertThat(result.get(1).newStatus()).isEqualTo(ExpenseRequestStatus.WAITING_FOR_APPROVAL);
+      verify(expenseRequestHistoryRepository)
+          .findByRequestId(requestId, Sort.by(Sort.Direction.DESC, "changedAt"));
+    }
+
+    @Test
+    @DisplayName("should retrieve all status history for a user")
+    void shouldGetUserExpenseRequestHistory() {
+      // given
+      String userId = "user123";
+      LocalDateTime now = LocalDateTime.now();
+
+      ExpenseRequestHistory history1 =
+          ExpenseRequestHistory.builder()
+              .id(1L)
+              .requestId(1L)
+              .userId(userId)
+              .previousStatus(null)
+              .newStatus(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
+              .changedAt(now.minusDays(2))
+              .changeReason("Expense request created")
+              .build();
+
+      ExpenseRequestHistory history2 =
+          ExpenseRequestHistory.builder()
+              .id(2L)
+              .requestId(1L)
+              .userId(userId)
+              .previousStatus(ExpenseRequestStatus.WAITING_FOR_APPROVAL)
+              .newStatus(ExpenseRequestStatus.CANCELLED)
+              .changedAt(now.minusHours(1))
+              .changeReason("Expense request cancelled by user")
+              .build();
+
+      when(expenseRequestHistoryRepository.findByUserId(
+              userId, Sort.by(Sort.Direction.DESC, "changedAt")))
+          .thenReturn(List.of(history2, history1));
+
+      // when
+      List<ExpenseRequestHistoryDto> result =
+          expenseRequestService.getUserExpenseRequestHistory(userId);
+
+      // then
+      assertThat(result).hasSize(2);
+      assertThat(result).allMatch(h -> h.userId().equals(userId));
+      verify(expenseRequestHistoryRepository)
+          .findByUserId(userId, Sort.by(Sort.Direction.DESC, "changedAt"));
+    }
+
+    @Test
+    @DisplayName("should return empty list when no history exists")
+    void shouldReturnEmptyListWhenNoHistory() {
+      // given
+      Long requestId = 999L;
+      when(expenseRequestHistoryRepository.findByRequestId(
+              requestId, Sort.by(Sort.Direction.DESC, "changedAt")))
+          .thenReturn(List.of());
+
+      // when
+      List<ExpenseRequestHistoryDto> result =
+          expenseRequestService.getExpenseRequestStatusHistory(requestId);
+
+      // then
+      assertThat(result).isEmpty();
     }
   }
 }
