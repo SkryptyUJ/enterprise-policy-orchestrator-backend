@@ -8,15 +8,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequestHistory;
-import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequest;
+import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequestHistory;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.expense_request.repository.ExpenseRequestRepository;
 import com.uj.enterprise_policy_orchestrator.expense_request.service.ExpenseRequestService;
+import com.uj.enterprise_policy_orchestrator.policy.Policy;
 import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto;
 import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;

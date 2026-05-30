@@ -1,7 +1,7 @@
 package com.uj.enterprise_policy_orchestrator.policy.service;
 
 import com.uj.enterprise_policy_orchestrator.category.enums.ExpenseCategory;
-import com.uj.enterprise_policy_orchestrator.domain.Policy;
+import com.uj.enterprise_policy_orchestrator.policy.Policy;
 import com.uj.enterprise_policy_orchestrator.policy.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
 import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;

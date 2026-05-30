@@ -6,12 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.expense_request.repository.ExpenseRequestRepository;
+import com.uj.enterprise_policy_orchestrator.policy.Policy;
 import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto;
 import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
