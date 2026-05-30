@@ -1130,10 +1130,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
-              new BigDecimal("1500.00"),
-              "Travel",
-              "History test request",
-              LocalDateTime.of(2026, 4, 20, 0, 0, 0));
+              new BigDecimal("1500.00"), "Travel", "History test request", now.minusDays(5));
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
