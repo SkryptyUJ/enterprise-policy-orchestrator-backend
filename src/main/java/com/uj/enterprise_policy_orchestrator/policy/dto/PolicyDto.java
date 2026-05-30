@@ -1,4 +1,4 @@
-package com.uj.enterprise_policy_orchestrator.dto;
+package com.uj.enterprise_policy_orchestrator.policy.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;

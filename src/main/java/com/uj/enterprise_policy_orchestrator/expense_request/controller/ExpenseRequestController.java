@@ -1,9 +1,9 @@
-package com.uj.enterprise_policy_orchestrator.controller;
+package com.uj.enterprise_policy_orchestrator.expense_request.controller;
 
-import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
-import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
-import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestHistoryDto;
-import com.uj.enterprise_policy_orchestrator.service.ExpenseRequestService;
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.expense_request.service.ExpenseRequestService;
+import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

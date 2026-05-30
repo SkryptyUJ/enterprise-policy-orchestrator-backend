@@ -1,4 +1,4 @@
-package com.uj.enterprise_policy_orchestrator.domain;
+package com.uj.enterprise_policy_orchestrator.policy;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;

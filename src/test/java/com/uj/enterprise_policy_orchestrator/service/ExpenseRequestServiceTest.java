@@ -8,17 +8,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
-import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequestHistory;
-import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
-import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
-import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
-import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestHistoryDto;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
+import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequest;
+import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequestHistory;
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.expense_request.repository.ExpenseRequestRepository;
+import com.uj.enterprise_policy_orchestrator.expense_request.service.ExpenseRequestService;
+import com.uj.enterprise_policy_orchestrator.policy.Policy;
+import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto;
+import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
+import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
-import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
-import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -476,62 +478,6 @@ class ExpenseRequestServiceTest {
       // then
       verify(policyService)
           .findApplicablePolicies("Travel", expectedMatchingDate, new BigDecimal("100.00"));
-    }
-  }
-
-  @Nested
-  @DisplayName("Scenario 2: Skipping deactivated policies when evaluating new expense requests")
-  class EvaluateExpenseRequestAgainstPolicies {
-
-    @Test
-    @DisplayName("should return active policies from repository")
-    void shouldOnlyUseActivePoliciesForEvaluation() {
-      // given
-      LocalDateTime now = LocalDateTime.now();
-
-      Policy activePolicy =
-          Policy.builder()
-              .id(1L)
-              .policyId("100")
-              .authorUserId("1")
-              .categoryId(1)
-              .name("Active Travel Policy")
-              .version(1)
-              .createdAt(now.minusDays(30))
-              .startsAt(now.minusDays(30))
-              .expiresAt(null)
-              .minPrice(new java.math.BigDecimal("100"))
-              .maxPrice(new java.math.BigDecimal("5000"))
-              .category("1")
-              .authorizedRole(2)
-              .build();
-
-      // repository returns only active policies
-      when(policyRepository.findActivePolicies(any(LocalDateTime.class)))
-          .thenReturn(List.of(activePolicy));
-
-      // when
-      List<Policy> result = expenseRequestService.getActivePolicies();
-
-      // then
-      assertThat(result).containsExactly(activePolicy);
-      verify(policyRepository).findActivePolicies(any(LocalDateTime.class));
-    }
-
-    @Test
-    @DisplayName("should return empty list when no active policies exist")
-    void shouldNotIncludeExpiredPoliciesInEvaluation() {
-      // given
-      when(policyRepository.findActivePolicies(any(LocalDateTime.class))).thenReturn(List.of());
-
-      // when
-      List<Policy> result = expenseRequestService.getActivePolicies();
-
-      // then
-      assertThat(result).isEmpty();
-
-      verify(policyRepository).findActivePolicies(any(LocalDateTime.class));
-      verify(policyRepository, never()).findAll();
     }
   }
 

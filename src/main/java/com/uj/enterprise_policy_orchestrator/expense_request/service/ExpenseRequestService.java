@@ -1,17 +1,18 @@
-package com.uj.enterprise_policy_orchestrator.service;
+package com.uj.enterprise_policy_orchestrator.expense_request.service;
 
-import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequest;
-import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequestHistory;
-import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseCategory;
-import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
-import com.uj.enterprise_policy_orchestrator.dto.CreateExpenseRequestDto;
-import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestDto;
-import com.uj.enterprise_policy_orchestrator.dto.ExpenseRequestHistoryDto;
+import com.uj.enterprise_policy_orchestrator.category.enums.ExpenseCategory;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
+import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequest;
+import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequestHistory;
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
+import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.expense_request.repository.ExpenseRequestRepository;
+import com.uj.enterprise_policy_orchestrator.policy.Policy;
+import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto;
+import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
+import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
-import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestRepository;
-import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.LinkedHashSet;
@@ -60,10 +61,6 @@ public class ExpenseRequestService {
     return toDto(saved);
   }
 
-  List<Policy> getActivePolicies() {
-    return policyRepository.findActivePolicies(LocalDateTime.now());
-  }
-
   private Set<Policy> findApplicablePolicies(ExpenseRequest exp) {
     LocalDateTime expenseDateForMatching = exp.getExpenseDate();
     if (expenseDateForMatching != null
@@ -105,10 +102,6 @@ public class ExpenseRequestService {
 
   @Transactional(readOnly = true)
   public List<ExpenseRequestDto> getExpenseRequestHistory(String userId) {
-    // userRepository
-    //     .findById(userId)
-    //     .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
-
     return expenseRequestRepository
         .findByUserId(userId, Sort.by(Sort.Direction.DESC, "submittedAt"))
         .stream()

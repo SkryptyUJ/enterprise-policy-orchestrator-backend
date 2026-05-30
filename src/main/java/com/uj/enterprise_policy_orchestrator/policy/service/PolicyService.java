@@ -1,10 +1,10 @@
-package com.uj.enterprise_policy_orchestrator.service;
+package com.uj.enterprise_policy_orchestrator.policy.service;
 
-import com.uj.enterprise_policy_orchestrator.domain.Policy;
-import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseCategory;
-import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
-import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
-import com.uj.enterprise_policy_orchestrator.repository.PolicyRepository;
+import com.uj.enterprise_policy_orchestrator.category.enums.ExpenseCategory;
+import com.uj.enterprise_policy_orchestrator.policy.Policy;
+import com.uj.enterprise_policy_orchestrator.policy.dto.CreatePolicyDto;
+import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
+import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -120,12 +120,6 @@ public class PolicyService {
         .toList();
   }
 
-  public List<PolicyDto> getActivePolicies() {
-    return policyRepository.findActivePolicies(LocalDateTime.now()).stream()
-        .map(this::toDto)
-        .toList();
-  }
-
   public Set<Policy> findApplicablePolicies(
       String category, LocalDateTime expenseDate, BigDecimal amount) {
     String normalizedCategory = ExpenseCategory.normalize(category);
@@ -146,7 +140,7 @@ public class PolicyService {
     return new HashSet<>(latestByPolicyId.values());
   }
 
-  PolicyDto toDto(Policy entity) {
+  public PolicyDto toDto(Policy entity) {
     return new PolicyDto(
         entity.getId(),
         entity.getPolicyId(),
