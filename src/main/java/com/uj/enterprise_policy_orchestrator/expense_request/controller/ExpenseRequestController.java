@@ -1,5 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.expense_request.controller;
 
+import com.uj.enterprise_policy_orchestrator.expense_request.dto.ApproveExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.service.ExpenseRequestService;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,6 +37,11 @@ public class ExpenseRequestController {
     return expenseRequestService.getExpenseRequestHistory(userId);
   }
 
+  @GetMapping("/review")
+  public List<ExpenseRequestDto> getExpenseRequestHistoryForReview(@PathVariable String userId) {
+    return expenseRequestService.getExpenseRequestHistoryForReview();
+  }
+
   @DeleteMapping("/{expenseRequestId}")
   @ResponseStatus(HttpStatus.OK)
   public ExpenseRequestDto cancelExpenseRequest(
@@ -57,5 +64,29 @@ public class ExpenseRequestController {
   public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(
       @PathVariable String userId, @PathVariable Long expenseRequestId) {
     return expenseRequestService.getExpenseRequestStatusHistory(expenseRequestId);
+  }
+
+  @GetMapping("/review/{requestId}")
+  public ExpenseRequestDto getExpenseRequestByIdForReview(
+      @PathVariable String userId, @PathVariable Long requestId) {
+    return expenseRequestService.getExpenseRequestByIdForReview(requestId);
+  }
+
+  @PatchMapping("/review/{requestId}/approve")
+  @ResponseStatus(HttpStatus.OK)
+  public ExpenseRequestDto approveExpenseRequest(
+      @PathVariable String userId,
+      @PathVariable Long requestId,
+      @RequestBody ApproveExpenseRequestDto dto) {
+    return expenseRequestService.approveExpenseRequest(userId, requestId, dto.decisionRationale());
+  }
+
+  @PatchMapping("/review/{requestId}/decline")
+  @ResponseStatus(HttpStatus.OK)
+  public ExpenseRequestDto declineExpenseRequest(
+      @PathVariable String userId,
+      @PathVariable Long requestId,
+      @RequestBody ApproveExpenseRequestDto dto) {
+    return expenseRequestService.declineExpenseRequest(userId, requestId, dto.decisionRationale());
   }
 }
