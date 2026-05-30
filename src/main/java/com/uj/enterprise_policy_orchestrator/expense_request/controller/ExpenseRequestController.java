@@ -3,6 +3,7 @@ package com.uj.enterprise_policy_orchestrator.expense_request.controller;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.service.ExpenseRequestService;
+import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,9 +42,20 @@ public class ExpenseRequestController {
     return expenseRequestService.cancelExpenseRequest(userId, expenseRequestId);
   }
 
+  @GetMapping("/history/all")
+  public List<ExpenseRequestHistoryDto> getUserExpenseRequestHistory(@PathVariable String userId) {
+    return expenseRequestService.getUserExpenseRequestHistory(userId);
+  }
+
   @GetMapping("/{requestId}")
   public ExpenseRequestDto getExpenseRequestById(
       @PathVariable String userId, @PathVariable Long requestId) {
     return expenseRequestService.getExpenseRequestById(userId, requestId);
+  }
+
+  @GetMapping("/{expenseRequestId}/history")
+  public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(
+      @PathVariable String userId, @PathVariable Long expenseRequestId) {
+    return expenseRequestService.getExpenseRequestStatusHistory(expenseRequestId);
   }
 }

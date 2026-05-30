@@ -1,6 +1,7 @@
 package com.uj.enterprise_policy_orchestrator.expense_request.service;
 
 import com.uj.enterprise_policy_orchestrator.category.enums.ExpenseCategory;
+import com.uj.enterprise_policy_orchestrator.domain.ExpenseRequestHistory;
 import com.uj.enterprise_policy_orchestrator.domain.Policy;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequest;
@@ -8,8 +9,10 @@ import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRe
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseRequestStatus;
 import com.uj.enterprise_policy_orchestrator.expense_request.repository.ExpenseRequestRepository;
+import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto;
 import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;
+import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.LinkedHashSet;
@@ -25,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExpenseRequestService {
 
   private final ExpenseRequestRepository expenseRequestRepository;
+  private final ExpenseRequestHistoryRepository expenseRequestHistoryRepository;
   private final PolicyRepository policyRepository;
   private final PolicyService policyService;
 
@@ -51,6 +55,8 @@ public class ExpenseRequestService {
     request.getApplicablePolicies().addAll(applicablePolicies);
 
     ExpenseRequest saved = expenseRequestRepository.save(request);
+
+    recordHistory(saved.getId(), userId, null, saved.getStatus(), "Expense request created");
 
     return toDto(saved);
   }
@@ -125,6 +131,14 @@ public class ExpenseRequestService {
     request.setStatus(ExpenseRequestStatus.CANCELLED);
     ExpenseRequest cancelled = expenseRequestRepository.save(request);
 
+    // Record history
+    recordHistory(
+        cancelled.getId(),
+        userId,
+        ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+        ExpenseRequestStatus.CANCELLED,
+        "Expense request cancelled by user");
+
     return toDto(cancelled);
   }
 
@@ -144,6 +158,53 @@ public class ExpenseRequestService {
     }
 
     return toDto(request);
+  }
+
+  @Transactional(readOnly = true)
+  public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(Long requestId) {
+    return expenseRequestHistoryRepository
+        .findByRequestId(requestId, Sort.by(Sort.Direction.DESC, "changedAt"))
+        .stream()
+        .map(this::toHistoryDto)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<ExpenseRequestHistoryDto> getUserExpenseRequestHistory(String userId) {
+    return expenseRequestHistoryRepository
+        .findByUserId(userId, Sort.by(Sort.Direction.DESC, "changedAt"))
+        .stream()
+        .map(this::toHistoryDto)
+        .toList();
+  }
+
+  @Transactional
+  private void recordHistory(
+      Long requestId,
+      String userId,
+      ExpenseRequestStatus previousStatus,
+      ExpenseRequestStatus newStatus,
+      String changeReason) {
+    ExpenseRequestHistory history =
+        ExpenseRequestHistory.builder()
+            .requestId(requestId)
+            .userId(userId)
+            .previousStatus(previousStatus)
+            .newStatus(newStatus)
+            .changeReason(changeReason)
+            .build();
+    expenseRequestHistoryRepository.save(history);
+  }
+
+  private ExpenseRequestHistoryDto toHistoryDto(ExpenseRequestHistory entity) {
+    return new ExpenseRequestHistoryDto(
+        entity.getId(),
+        entity.getRequestId(),
+        entity.getUserId(),
+        entity.getPreviousStatus(),
+        entity.getNewStatus(),
+        entity.getChangedAt(),
+        entity.getChangeReason());
   }
 
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
