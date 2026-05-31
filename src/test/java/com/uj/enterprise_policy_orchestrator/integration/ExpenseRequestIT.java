@@ -737,6 +737,358 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
   }
 
   @Nested
+  @DisplayName("Review endpoints for manager/admin decisions")
+  class ReviewEndpointsE2E {
+
+    @Test
+    @DisplayName("should return review list sorted by submittedAt descending")
+    void shouldReturnReviewListSortedBySubmittedAtDescending() throws InterruptedException {
+      String reviewerId = "reviewer-list-1";
+      createReviewPolicy("REVIEW-LIST-POLICY-001");
+
+      CreateExpenseRequestDto olderRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("210.00"),
+              "Travel",
+              "Older review request",
+              LocalDateTime.of(2026, 5, 1, 10, 0, 0));
+
+      CreateExpenseRequestDto newerRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("320.00"),
+              "Travel",
+              "Newer review request",
+              LocalDateTime.of(2026, 5, 2, 10, 0, 0));
+
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/expense-requests",
+          olderRequest,
+          ExpenseRequestDto.class,
+          "employee-review-1");
+      Thread.sleep(20);
+      restTemplate.postForEntity(
+          baseUrl() + "/api/users/{userId}/expense-requests",
+          newerRequest,
+          ExpenseRequestDto.class,
+          "employee-review-2");
+
+      ResponseEntity<ExpenseRequestDto[]> response =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/review",
+              ExpenseRequestDto[].class,
+              reviewerId);
+
+      assertEquals(HttpStatus.OK, response.getStatusCode());
+      ExpenseRequestDto[] body = response.getBody();
+      assertNotNull(body);
+      assertEquals(2, body.length);
+      assertTrue(body[0].submittedAt().isAfter(body[1].submittedAt()));
+      assertEquals("employee-review-2", body[0].userId());
+      assertEquals("employee-review-1", body[1].userId());
+    }
+
+    @Test
+    @DisplayName("should return expense request details for review by id")
+    void shouldReturnExpenseRequestDetailsForReviewById() {
+      String reviewerId = "reviewer-details-1";
+      String employeeId = "employee-details-1";
+      createReviewPolicy("REVIEW-DETAIL-POLICY-001");
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("450.00"),
+              "Travel",
+              "Request for review details",
+              LocalDateTime.of(2026, 5, 3, 9, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              employeeId);
+
+      Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
+
+      ResponseEntity<ExpenseRequestDto> response =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}",
+              ExpenseRequestDto.class,
+              reviewerId,
+              requestId);
+
+      assertEquals(HttpStatus.OK, response.getStatusCode());
+      assertNotNull(response.getBody());
+      assertEquals(requestId, response.getBody().id());
+      assertEquals(employeeId, response.getBody().userId());
+      assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, response.getBody().status());
+    }
+
+    @Test
+    @DisplayName("should approve waiting expense request and persist decision details")
+    void shouldApproveWaitingExpenseRequestAndPersistDecisionDetails() {
+      String reviewerId = "reviewer-approve-1";
+      String employeeId = "employee-approve-1";
+      createReviewPolicy("REVIEW-APPROVE-POLICY-001");
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("520.00"),
+              "Travel",
+              "Request for approve",
+              LocalDateTime.of(2026, 5, 4, 10, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              employeeId);
+
+      Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
+
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_JSON);
+      String requestJson =
+          """
+          {"decisionRationale":"Wydatek zgodny z polityką."}
+          """;
+
+      ResponseEntity<ExpenseRequestDto> approveResponse =
+          restTemplate.exchange(
+              baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/approve",
+              org.springframework.http.HttpMethod.PATCH,
+              new HttpEntity<>(requestJson, headers),
+              ExpenseRequestDto.class,
+              reviewerId,
+              requestId);
+
+      assertEquals(HttpStatus.OK, approveResponse.getStatusCode());
+      assertNotNull(approveResponse.getBody());
+      assertEquals(ExpenseRequestStatus.APPROVED, approveResponse.getBody().status());
+      assertEquals("Wydatek zgodny z polityką.", approveResponse.getBody().decisionRationale());
+      assertEquals(reviewerId, approveResponse.getBody().decidedBy());
+      assertNotNull(approveResponse.getBody().decidedAt());
+
+      ExpenseRequest saved = expenseRequestRepository.findById(requestId).orElseThrow();
+      assertEquals(ExpenseRequestStatus.APPROVED, saved.getStatus());
+      assertEquals("Wydatek zgodny z polityką.", saved.getDecisionRationale());
+      assertEquals(reviewerId, saved.getDecidedBy());
+      assertNotNull(saved.getDecidedAt());
+
+      ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              ExpenseRequestHistoryDto[].class,
+              reviewerId,
+              requestId);
+
+      assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
+      assertNotNull(historyResponse.getBody());
+      assertEquals(2, historyResponse.getBody().length);
+      assertEquals(ExpenseRequestStatus.APPROVED, historyResponse.getBody()[0].newStatus());
+      assertEquals(
+          "Expense request approved by reviewer", historyResponse.getBody()[0].changeReason());
+    }
+
+    @Test
+    @DisplayName("should decline waiting expense request and persist decision details")
+    void shouldDeclineWaitingExpenseRequestAndPersistDecisionDetails() {
+      String reviewerId = "reviewer-decline-1";
+      String employeeId = "employee-decline-1";
+      createReviewPolicy("REVIEW-DECLINE-POLICY-001");
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("640.00"),
+              "Travel",
+              "Request for decline",
+              LocalDateTime.of(2026, 5, 5, 11, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              employeeId);
+
+      Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
+
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_JSON);
+      String requestJson =
+          """
+          {"decisionRationale":"Wydatek poza limitem polityki."}
+          """;
+
+      ResponseEntity<ExpenseRequestDto> declineResponse =
+          restTemplate.exchange(
+              baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/decline",
+              org.springframework.http.HttpMethod.PATCH,
+              new HttpEntity<>(requestJson, headers),
+              ExpenseRequestDto.class,
+              reviewerId,
+              requestId);
+
+      assertEquals(HttpStatus.OK, declineResponse.getStatusCode());
+      assertNotNull(declineResponse.getBody());
+      assertEquals(ExpenseRequestStatus.DECLINED, declineResponse.getBody().status());
+      assertEquals("Wydatek poza limitem polityki.", declineResponse.getBody().decisionRationale());
+      assertEquals(reviewerId, declineResponse.getBody().decidedBy());
+      assertNotNull(declineResponse.getBody().decidedAt());
+
+      ExpenseRequest saved = expenseRequestRepository.findById(requestId).orElseThrow();
+      assertEquals(ExpenseRequestStatus.DECLINED, saved.getStatus());
+      assertEquals("Wydatek poza limitem polityki.", saved.getDecisionRationale());
+      assertEquals(reviewerId, saved.getDecidedBy());
+      assertNotNull(saved.getDecidedAt());
+
+      ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
+          restTemplate.getForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              ExpenseRequestHistoryDto[].class,
+              reviewerId,
+              requestId);
+
+      assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
+      assertNotNull(historyResponse.getBody());
+      assertEquals(2, historyResponse.getBody().length);
+      assertEquals(ExpenseRequestStatus.DECLINED, historyResponse.getBody()[0].newStatus());
+      assertEquals(
+          "Expense request declined by reviewer", historyResponse.getBody()[0].changeReason());
+    }
+
+    @Test
+    @DisplayName("should return 400 when approving request without rationale")
+    void shouldReturnBadRequestWhenApprovingWithoutRationale() {
+      String reviewerId = "reviewer-approve-error-1";
+      String employeeId = "employee-approve-error-1";
+      createReviewPolicy("REVIEW-APPROVE-ERROR-POLICY-001");
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("480.00"),
+              "Travel",
+              "Request for invalid approve",
+              LocalDateTime.of(2026, 5, 6, 12, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              employeeId);
+
+      Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
+
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_JSON);
+      String requestJson =
+          """
+          {"decisionRationale":"   "}
+          """;
+
+      HttpClientErrorException.BadRequest exception =
+          assertThrows(
+              HttpClientErrorException.BadRequest.class,
+              () ->
+                  restTemplate.exchange(
+                      baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/approve",
+                      org.springframework.http.HttpMethod.PATCH,
+                      new HttpEntity<>(requestJson, headers),
+                      ExpenseRequestDto.class,
+                      reviewerId,
+                      requestId));
+
+      assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+      assertTrue(exception.getResponseBodyAsString().contains("Decision rationale must not be empty"));
+
+      ExpenseRequest saved = expenseRequestRepository.findById(requestId).orElseThrow();
+      assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, saved.getStatus());
+      assertTrue(saved.getDecisionRationale() == null || saved.getDecisionRationale().isBlank());
+    }
+
+    @Test
+    @DisplayName("should return 400 when declining request that is no longer waiting")
+    void shouldReturnBadRequestWhenDecliningNonWaitingRequest() {
+      String reviewerId = "reviewer-decline-error-1";
+      String employeeId = "employee-decline-error-1";
+      createReviewPolicy("REVIEW-DECLINE-ERROR-POLICY-001");
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("510.00"),
+              "Travel",
+              "Request for invalid decline",
+              LocalDateTime.of(2026, 5, 7, 13, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> createResponse =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/users/{userId}/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              employeeId);
+
+      Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
+
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_JSON);
+
+      String approveJson =
+          """
+          {"decisionRationale":"Najpierw zatwierdzenie."}
+          """;
+
+      String declineJson =
+          """
+          {"decisionRationale":"Nie powinno przejść."}
+          """;
+
+      restTemplate.exchange(
+          baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/approve",
+          org.springframework.http.HttpMethod.PATCH,
+          new HttpEntity<>(approveJson, headers),
+          ExpenseRequestDto.class,
+          reviewerId,
+          requestId);
+
+      HttpClientErrorException.BadRequest exception =
+          assertThrows(
+              HttpClientErrorException.BadRequest.class,
+              () ->
+                  restTemplate.exchange(
+                      baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/decline",
+                      org.springframework.http.HttpMethod.PATCH,
+                      new HttpEntity<>(declineJson, headers),
+                      ExpenseRequestDto.class,
+                      reviewerId,
+                      requestId));
+
+      assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+      assertTrue(exception.getResponseBodyAsString().contains("cannot be declined with status"));
+    }
+
+    private void createReviewPolicy(String policyId) {
+      Policy policy =
+          Policy.builder()
+              .policyId(policyId)
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Review Policy")
+              .description("Policy for review workflow tests")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .category("Travel")
+              .authorizedRole(1)
+              .build();
+      policyRepository.save(policy);
+    }
+  }
+
+  @Nested
   @DisplayName("Error handling and policy matching edge cases")
   class ErrorHandlingEdgeCases {
 

@@ -109,6 +109,13 @@ public class ExpenseRequestService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
+  public List<ExpenseRequestDto> getExpenseRequestHistoryForReview() {
+    return expenseRequestRepository.findAll(Sort.by(Sort.Direction.DESC, "submittedAt")).stream()
+        .map(this::toDto)
+        .toList();
+  }
+
   @Transactional
   public ExpenseRequestDto cancelExpenseRequest(String userId, Long expenseRequestId) {
     ExpenseRequest request =
@@ -176,6 +183,97 @@ public class ExpenseRequestService {
         .stream()
         .map(this::toHistoryDto)
         .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public ExpenseRequestDto getExpenseRequestByIdForReview(Long requestId) {
+    ExpenseRequest request =
+        expenseRequestRepository
+            .findById(requestId)
+            .orElseThrow(
+                () ->
+                    new jakarta.persistence.EntityNotFoundException(
+                        "Expense request not found with id: " + requestId));
+
+    return toDto(request);
+  }
+
+  @Transactional
+  public ExpenseRequestDto approveExpenseRequest(
+      String reviewerUserId, Long expenseRequestId, String decisionRationale) {
+    if (decisionRationale == null || decisionRationale.trim().isEmpty()) {
+      throw new IllegalArgumentException("Decision rationale must not be empty");
+    }
+
+    ExpenseRequest request =
+        expenseRequestRepository
+            .findById(expenseRequestId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Expense request not found with id: " + expenseRequestId));
+
+    if (request.getStatus() != ExpenseRequestStatus.WAITING_FOR_APPROVAL) {
+      throw new IllegalArgumentException(
+          "Expense request cannot be approved with status: " + request.getStatus());
+    }
+
+    ExpenseRequestStatus previousStatus = request.getStatus();
+
+    request.setStatus(ExpenseRequestStatus.APPROVED);
+    request.setDecisionRationale(decisionRationale.trim());
+    request.setDecidedBy(reviewerUserId);
+    request.setDecidedAt(LocalDateTime.now());
+
+    ExpenseRequest approved = expenseRequestRepository.save(request);
+
+    recordHistory(
+        approved.getId(),
+        reviewerUserId,
+        previousStatus,
+        ExpenseRequestStatus.APPROVED,
+        "Expense request approved by reviewer");
+
+    return toDto(approved);
+  }
+
+  @Transactional
+  public ExpenseRequestDto declineExpenseRequest(
+      String reviewerUserId, Long expenseRequestId, String decisionRationale) {
+    if (decisionRationale == null || decisionRationale.trim().isEmpty()) {
+      throw new IllegalArgumentException("Decision rationale must not be empty");
+    }
+
+    ExpenseRequest request =
+        expenseRequestRepository
+            .findById(expenseRequestId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "Expense request not found with id: " + expenseRequestId));
+
+    if (request.getStatus() != ExpenseRequestStatus.WAITING_FOR_APPROVAL) {
+      throw new IllegalArgumentException(
+          "Expense request cannot be declined with status: " + request.getStatus());
+    }
+
+    ExpenseRequestStatus previousStatus = request.getStatus();
+
+    request.setStatus(ExpenseRequestStatus.DECLINED);
+    request.setDecisionRationale(decisionRationale.trim());
+    request.setDecidedBy(reviewerUserId);
+    request.setDecidedAt(LocalDateTime.now());
+
+    ExpenseRequest declined = expenseRequestRepository.save(request);
+
+    recordHistory(
+        declined.getId(),
+        reviewerUserId,
+        previousStatus,
+        ExpenseRequestStatus.DECLINED,
+        "Expense request declined by reviewer");
+
+    return toDto(declined);
   }
 
   @Transactional
