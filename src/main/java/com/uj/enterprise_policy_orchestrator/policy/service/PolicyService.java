@@ -33,11 +33,19 @@ public class PolicyService {
     String policyId = dto.policyId().orElse(UUID.randomUUID().toString());
     String normalizedCategory = ExpenseCategory.normalize(dto.category());
 
-    // Find and invalidate the active policy with the same policyId
+    // Compute next version for any existing history of this policy id.
     int nextVersion = 1;
     var existingPolicies = policyRepository.findByPolicyId(policyId);
 
     if (!existingPolicies.isEmpty()) {
+      nextVersion =
+          existingPolicies.stream()
+              .map(Policy::getVersion)
+              .filter(version -> version != null)
+              .max(Integer::compareTo)
+              .orElse(0)
+              + 1;
+
       LocalDateTime now = LocalDateTime.now();
       var activePolicy =
           existingPolicies.stream().filter(p -> isActiveDuringDate(p, now)).findFirst();
@@ -46,7 +54,6 @@ public class PolicyService {
         Policy active = activePolicy.get();
         active.setExpiresAt(dto.startsAt());
         policyRepository.save(active);
-        nextVersion = active.getVersion() + 1;
       }
     }
 
