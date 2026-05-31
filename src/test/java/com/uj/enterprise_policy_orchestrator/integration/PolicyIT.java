@@ -200,6 +200,74 @@ class PolicyIT extends AbstractIntegrationTest {
       assertEquals(2, v2Response.getBody().version());
       assertEquals(policyId, v2Response.getBody().policyId());
     }
+
+      @Test
+      @DisplayName("should increment version even when previous policy versions are inactive")
+      void shouldIncrementVersionEvenWhenPreviousVersionsAreInactive() {
+        String userId = "user-inactive-version";
+        String policyId = "POL-INACTIVE-CHAIN-001";
+
+        CreatePolicyDto v1Request =
+          new CreatePolicyDto(
+            Optional.of(policyId),
+            1,
+            "Policy V1",
+            "Inactive version 1",
+            LocalDateTime.of(2020, 1, 1, 0, 0, 0),
+            LocalDateTime.of(2020, 12, 31, 23, 59, 59),
+            new BigDecimal("100"),
+            new BigDecimal("1000"),
+            "Travel",
+            1);
+
+        ResponseEntity<PolicyDto> v1Response =
+          restTemplate.postForEntity(
+            baseUrl() + "/api/users/{userId}/policies", v1Request, PolicyDto.class, userId);
+        assertEquals(HttpStatus.CREATED, v1Response.getStatusCode());
+        assertNotNull(v1Response.getBody());
+        assertEquals(1, v1Response.getBody().version());
+
+        CreatePolicyDto v2Request =
+          new CreatePolicyDto(
+            Optional.of(policyId),
+            1,
+            "Policy V2",
+            "Inactive version 2",
+            LocalDateTime.of(2021, 1, 1, 0, 0, 0),
+            LocalDateTime.of(2021, 12, 31, 23, 59, 59),
+            new BigDecimal("150"),
+            new BigDecimal("1500"),
+            "Travel",
+            1);
+
+        ResponseEntity<PolicyDto> v2Response =
+          restTemplate.postForEntity(
+            baseUrl() + "/api/users/{userId}/policies", v2Request, PolicyDto.class, userId);
+        assertEquals(HttpStatus.CREATED, v2Response.getStatusCode());
+        assertNotNull(v2Response.getBody());
+        assertEquals(2, v2Response.getBody().version());
+
+        CreatePolicyDto v3Request =
+          new CreatePolicyDto(
+            Optional.of(policyId),
+            1,
+            "Policy V3",
+            "Current update after inactive versions",
+            LocalDateTime.now().plusDays(1),
+            null,
+            new BigDecimal("200"),
+            new BigDecimal("2000"),
+            "Travel",
+            2);
+
+        ResponseEntity<PolicyDto> v3Response =
+          restTemplate.postForEntity(
+            baseUrl() + "/api/users/{userId}/policies", v3Request, PolicyDto.class, userId);
+        assertEquals(HttpStatus.CREATED, v3Response.getStatusCode());
+        assertNotNull(v3Response.getBody());
+        assertEquals(3, v3Response.getBody().version());
+        assertEquals(policyId, v3Response.getBody().policyId());
+      }
   }
 
   @Nested

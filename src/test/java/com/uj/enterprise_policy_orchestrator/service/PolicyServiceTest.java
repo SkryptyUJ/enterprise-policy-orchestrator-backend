@@ -149,65 +149,6 @@ class PolicyServiceTest {
       verify(policyRepository, times(1)).save(captor.capture());
       assertThat(captor.getValue().getCategory()).isEqualTo("1");
     }
-
-    @Test
-    @DisplayName("should increment version even when previous policy is not active")
-    void shouldIncrementVersionEvenWhenPreviousPolicyIsNotActive() {
-      String userId = "7";
-      LocalDateTime now = LocalDateTime.now();
-
-      CreatePolicyDto dto =
-          new CreatePolicyDto(
-              Optional.of("POL-300"),
-              1,
-              "Updated Policy",
-              "Description changed",
-              now.plusDays(1),
-              null,
-              new java.math.BigDecimal("100"),
-              new java.math.BigDecimal("5000"),
-              "Travel",
-              2);
-
-      Policy inactivePreviousVersion =
-          Policy.builder()
-              .id(30L)
-              .policyId("POL-300")
-              .authorUserId(userId)
-              .categoryId(1)
-              .name("Old Policy")
-              .description("Old description")
-              .version(2)
-              .createdAt(now.minusDays(10))
-              .startsAt(now.minusDays(10))
-              .expiresAt(now.minusDays(1))
-              .minPrice(new java.math.BigDecimal("100"))
-              .maxPrice(new java.math.BigDecimal("5000"))
-              .category("Travel")
-              .authorizedRole(2)
-              .updatedAt(now.minusDays(1))
-              .build();
-
-      when(policyRepository.findByPolicyId("POL-300")).thenReturn(List.of(inactivePreviousVersion));
-      when(policyRepository.save(any(Policy.class)))
-          .thenAnswer(
-              invocation -> {
-                Policy policy = invocation.getArgument(0);
-                if (policy.getId() == null) {
-                  policy.setId(31L);
-                }
-                return policy;
-              });
-
-      PolicyDto result = policyService.createPolicy(userId, dto);
-
-      assertThat(result.version()).isEqualTo(3);
-
-      ArgumentCaptor<Policy> captor = ArgumentCaptor.forClass(Policy.class);
-      verify(policyRepository, times(1)).save(captor.capture());
-      assertThat(captor.getValue().getVersion()).isEqualTo(3);
-      assertThat(captor.getValue().getPolicyId()).isEqualTo("POL-300");
-    }
   }
 
   @Nested
