@@ -29,6 +29,8 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
+	implementation("org.springframework.boot:spring-boot-starter-security")
+	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 
 	annotationProcessor("org.projectlombok:lombok")
 	compileOnly("org.projectlombok:lombok")
@@ -41,6 +43,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-test")
 	testImplementation("org.springframework.boot:spring-boot-test-autoconfigure")
 	testImplementation("org.springframework:spring-test")
+	testImplementation("org.springframework.security:spring-security-test")
 	testImplementation("org.testcontainers:testcontainers:2.0.5")
 	testImplementation("org.testcontainers:postgresql:1.20.4")
 	testImplementation("org.testcontainers:junit-jupiter:1.20.4")

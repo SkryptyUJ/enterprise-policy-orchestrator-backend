@@ -7,6 +7,8 @@ import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,9 +17,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/users/{userId}/policies")
+@RequestMapping("/api/policies")
 @RequiredArgsConstructor
 public class PolicyController {
 
@@ -25,8 +28,9 @@ public class PolicyController {
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public PolicyDto createPolicy(@PathVariable String userId, @RequestBody CreatePolicyDto dto) {
-    return policyService.createPolicy(userId, dto);
+  public PolicyDto createPolicy(
+      @AuthenticationPrincipal Jwt jwt, @RequestBody CreatePolicyDto dto) {
+    return policyService.createPolicy(getAuthenticatedUserId(jwt), dto);
   }
 
   @GetMapping("/{policyId}/history")
@@ -44,7 +48,7 @@ public class PolicyController {
   @PatchMapping("/{policyId}/expiration")
   @ResponseStatus(HttpStatus.OK)
   public PolicyDto setExpiration(
-      @PathVariable Long policyId, @RequestBody SetPolicyExpirationDto dto) {
+      @PathVariable("policyId") Long policyId, @RequestBody SetPolicyExpirationDto dto) {
     return policyService.setExpiration(policyId, dto.expiresAt());
   }
 
@@ -52,5 +56,13 @@ public class PolicyController {
   @ResponseStatus(HttpStatus.OK)
   public List<PolicyDto> getAllPolicies() {
     return policyService.getAllPolicies();
+  }
+
+  private String getAuthenticatedUserId(Jwt jwt) {
+    if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing subject claim in JWT");
+    }
+
+    return jwt.getSubject();
   }
 }

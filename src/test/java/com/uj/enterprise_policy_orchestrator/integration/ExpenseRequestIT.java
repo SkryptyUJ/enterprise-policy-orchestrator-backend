@@ -17,7 +17,10 @@ import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +28,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -38,13 +42,16 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
   @Autowired private ExpenseRequestRepository expenseRequestRepository;
   @Autowired private ExpenseRequestHistoryRepository expenseRequestHistoryRepository;
   @Autowired private PolicyRepository policyRepository;
-  @Autowired private RestTemplate restTemplate;
+    @Autowired private RestTemplate springRestTemplate;
+
+    private AuthenticatedRestTemplate restTemplate;
 
   @BeforeEach
   void setUp() {
     expenseRequestHistoryRepository.deleteAll();
     expenseRequestRepository.deleteAll();
     policyRepository.deleteAll();
+        restTemplate = new AuthenticatedRestTemplate(springRestTemplate);
   }
 
   @AfterEach
@@ -55,7 +62,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
   }
 
   @Nested
-  @DisplayName("POST /api/users/{userId}/expense-requests - Create Expense Request")
+  @DisplayName("POST /api/expense-requests - Create Expense Request")
   class CreateExpenseRequestE2E {
 
     @Test
@@ -92,7 +99,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -144,7 +151,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -178,7 +185,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.BadRequest.class,
               () ->
                   restTemplate.postForEntity(
-                      baseUrl() + "/api/users/{userId}/expense-requests",
+                      baseUrl() + "/api/expense-requests",
                       createRequest,
                       ExpenseRequestDto.class,
                       userId));
@@ -218,7 +225,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> minResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               minRequest,
               ExpenseRequestDto.class,
               userId);
@@ -236,7 +243,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> maxResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               maxRequest,
               ExpenseRequestDto.class,
               userId + "-max");
@@ -299,7 +306,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
           HttpStatus.CREATED,
           restTemplate
               .postForEntity(
-                  baseUrl() + "/api/users/{userId}/expense-requests",
+                  baseUrl() + "/api/expense-requests",
                   createRequest,
                   ExpenseRequestDto.class,
                   userId)
@@ -344,7 +351,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -386,7 +393,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -431,7 +438,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       for (String userId : new String[] {"user-A", "user-B", "user-C"}) {
         ResponseEntity<ExpenseRequestDto> response =
             restTemplate.postForEntity(
-                baseUrl() + "/api/users/{userId}/expense-requests",
+                baseUrl() + "/api/expense-requests",
                 createRequest,
                 ExpenseRequestDto.class,
                 userId);
@@ -477,7 +484,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
           HttpStatus.CREATED,
           restTemplate
               .postForEntity(
-                  baseUrl() + "/api/users/{userId}/expense-requests",
+                  baseUrl() + "/api/expense-requests",
                   createRequest,
                   ExpenseRequestDto.class,
                   userId)
@@ -526,7 +533,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.exchange(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               org.springframework.http.HttpMethod.POST,
               new HttpEntity<>(jsonBody, headers),
               ExpenseRequestDto.class,
@@ -545,7 +552,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
   }
 
   @Nested
-  @DisplayName("GET /api/users/{userId}/expense-requests - Get Expense Request History")
+  @DisplayName("GET /api/expense-requests - Get Expense Request History")
   class GetExpenseRequestHistoryE2E {
 
     @Test
@@ -591,26 +598,26 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               LocalDateTime.of(2026, 3, 22, 10, 0, 0));
 
       restTemplate.postForEntity(
-          baseUrl() + "/api/users/{userId}/expense-requests",
+          baseUrl() + "/api/expense-requests",
           request1,
           ExpenseRequestDto.class,
           userId);
       Thread.sleep(20);
       restTemplate.postForEntity(
-          baseUrl() + "/api/users/{userId}/expense-requests",
+          baseUrl() + "/api/expense-requests",
           request2,
           ExpenseRequestDto.class,
           userId);
       Thread.sleep(20);
       restTemplate.postForEntity(
-          baseUrl() + "/api/users/{userId}/expense-requests",
+          baseUrl() + "/api/expense-requests",
           request3,
           ExpenseRequestDto.class,
           userId);
 
       ResponseEntity<ExpenseRequestDto[]> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               ExpenseRequestDto[].class,
               userId);
 
@@ -627,7 +634,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
   }
 
   @Nested
-  @DisplayName("GET /api/users/{userId}/expense-requests/{requestId} - Get Expense Request By Id")
+  @DisplayName("GET /api/expense-requests/{requestId} - Get Expense Request By Id")
   class GetExpenseRequestByIdE2E {
 
     @Test
@@ -661,7 +668,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -670,7 +677,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}",
+              baseUrl() + "/api/expense-requests/{requestId}",
               ExpenseRequestDto.class,
               userId,
               requestId);
@@ -714,7 +721,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -726,7 +733,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.NotFound.class,
               () ->
                   restTemplate.getForEntity(
-                      baseUrl() + "/api/users/{userId}/expense-requests/{requestId}",
+                      baseUrl() + "/api/expense-requests/{requestId}",
                       ExpenseRequestDto.class,
                       otherUserId,
                       requestId));
@@ -761,20 +768,20 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               LocalDateTime.of(2026, 5, 2, 10, 0, 0));
 
       restTemplate.postForEntity(
-          baseUrl() + "/api/users/{userId}/expense-requests",
+          baseUrl() + "/api/expense-requests",
           olderRequest,
           ExpenseRequestDto.class,
           "employee-review-1");
       Thread.sleep(20);
       restTemplate.postForEntity(
-          baseUrl() + "/api/users/{userId}/expense-requests",
+          baseUrl() + "/api/expense-requests",
           newerRequest,
           ExpenseRequestDto.class,
           "employee-review-2");
 
       ResponseEntity<ExpenseRequestDto[]> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/review",
+              baseUrl() + "/api/expense-requests/review",
               ExpenseRequestDto[].class,
               reviewerId);
 
@@ -803,7 +810,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               employeeId);
@@ -812,7 +819,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}",
+              baseUrl() + "/api/expense-requests/review/{requestId}",
               ExpenseRequestDto.class,
               reviewerId,
               requestId);
@@ -840,7 +847,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               employeeId);
@@ -856,8 +863,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> approveResponse =
           restTemplate.exchange(
-              baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/approve",
-              org.springframework.http.HttpMethod.PATCH,
+              baseUrl() + "/api/expense-requests/review/{requestId}/approve",
+              HttpMethod.PATCH,
               new HttpEntity<>(requestJson, headers),
               ExpenseRequestDto.class,
               reviewerId,
@@ -878,9 +885,9 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              baseUrl() + "/api/expense-requests/{requestId}/history",
               ExpenseRequestHistoryDto[].class,
-              reviewerId,
+              employeeId,
               requestId);
 
       assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
@@ -907,7 +914,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               employeeId);
@@ -923,8 +930,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> declineResponse =
           restTemplate.exchange(
-              baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/decline",
-              org.springframework.http.HttpMethod.PATCH,
+              baseUrl() + "/api/expense-requests/review/{requestId}/decline",
+              HttpMethod.PATCH,
               new HttpEntity<>(requestJson, headers),
               ExpenseRequestDto.class,
               reviewerId,
@@ -945,9 +952,9 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              baseUrl() + "/api/expense-requests/{requestId}/history",
               ExpenseRequestHistoryDto[].class,
-              reviewerId,
+              employeeId,
               requestId);
 
       assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
@@ -974,7 +981,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               employeeId);
@@ -993,8 +1000,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.BadRequest.class,
               () ->
                   restTemplate.exchange(
-                      baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/approve",
-                      org.springframework.http.HttpMethod.PATCH,
+                      baseUrl() + "/api/expense-requests/review/{requestId}/approve",
+                      HttpMethod.PATCH,
                       new HttpEntity<>(requestJson, headers),
                       ExpenseRequestDto.class,
                       reviewerId,
@@ -1024,7 +1031,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               employeeId);
@@ -1045,8 +1052,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
           """;
 
       restTemplate.exchange(
-          baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/approve",
-          org.springframework.http.HttpMethod.PATCH,
+          baseUrl() + "/api/expense-requests/review/{requestId}/approve",
+          HttpMethod.PATCH,
           new HttpEntity<>(approveJson, headers),
           ExpenseRequestDto.class,
           reviewerId,
@@ -1057,8 +1064,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.BadRequest.class,
               () ->
                   restTemplate.exchange(
-                      baseUrl() + "/api/users/{userId}/expense-requests/review/{requestId}/decline",
-                      org.springframework.http.HttpMethod.PATCH,
+                      baseUrl() + "/api/expense-requests/review/{requestId}/decline",
+                      HttpMethod.PATCH,
                       new HttpEntity<>(declineJson, headers),
                       ExpenseRequestDto.class,
                       reviewerId,
@@ -1127,7 +1134,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.BadRequest.class,
               () ->
                   restTemplate.postForEntity(
-                      baseUrl() + "/api/users/{userId}/expense-requests",
+                      baseUrl() + "/api/expense-requests",
                       createRequest,
                       ExpenseRequestDto.class,
                       userId));
@@ -1205,7 +1212,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1277,7 +1284,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1326,7 +1333,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> minResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               minRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1348,7 +1355,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.BadRequest.class,
               () ->
                   restTemplate.postForEntity(
-                      baseUrl() + "/api/users/{userId}/expense-requests",
+                      baseUrl() + "/api/expense-requests",
                       belowMinRequest,
                       ExpenseRequestDto.class,
                       userId2));
@@ -1388,7 +1395,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> maxResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               maxRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1410,7 +1417,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.BadRequest.class,
               () ->
                   restTemplate.postForEntity(
-                      baseUrl() + "/api/users/{userId}/expense-requests",
+                      baseUrl() + "/api/expense-requests",
                       aboveMaxRequest,
                       ExpenseRequestDto.class,
                       userId2));
@@ -1450,7 +1457,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1463,7 +1470,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
   @Nested
   @DisplayName(
-      "DELETE /api/users/{userId}/expense-requests/{expenseRequestId} - Cancel Expense Request")
+      "DELETE /api/expense-requests/{expenseRequestId} - Cancel Expense Request")
   class CancelExpenseRequestE2E {
 
     @Test
@@ -1499,7 +1506,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1512,7 +1519,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // when
       ResponseEntity<ExpenseRequestDto> cancelResponse =
           restTemplate.exchange(
-              baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+              baseUrl() + "/api/expense-requests/{expenseRequestId}",
               org.springframework.http.HttpMethod.DELETE,
               null,
               ExpenseRequestDto.class,
@@ -1549,7 +1556,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.class,
               () ->
                   restTemplate.exchange(
-                      baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+                      baseUrl() + "/api/expense-requests/{expenseRequestId}",
                       org.springframework.http.HttpMethod.DELETE,
                       null,
                       ExpenseRequestDto.class,
@@ -1593,7 +1600,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               owner);
@@ -1608,7 +1615,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.class,
               () ->
                   restTemplate.exchange(
-                      baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+                      baseUrl() + "/api/expense-requests/{expenseRequestId}",
                       org.springframework.http.HttpMethod.DELETE,
                       null,
                       ExpenseRequestDto.class,
@@ -1657,7 +1664,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1668,7 +1675,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // first cancellation - should succeed
       ResponseEntity<ExpenseRequestDto> firstCancel =
           restTemplate.exchange(
-              baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+              baseUrl() + "/api/expense-requests/{expenseRequestId}",
               org.springframework.http.HttpMethod.DELETE,
               null,
               ExpenseRequestDto.class,
@@ -1685,7 +1692,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               HttpClientErrorException.class,
               () ->
                   restTemplate.exchange(
-                      baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+                      baseUrl() + "/api/expense-requests/{expenseRequestId}",
                       org.springframework.http.HttpMethod.DELETE,
                       null,
                       ExpenseRequestDto.class,
@@ -1728,7 +1735,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1738,7 +1745,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       // when
       restTemplate.exchange(
-          baseUrl() + "/api/users/{userId}/expense-requests/{expenseRequestId}",
+          baseUrl() + "/api/expense-requests/{expenseRequestId}",
           org.springframework.http.HttpMethod.DELETE,
           null,
           ExpenseRequestDto.class,
@@ -1760,7 +1767,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
   @Nested
   @DisplayName(
-      "GET /api/users/{userId}/expense-requests/{expenseRequestId}/history - Get Request Status History")
+      "GET /api/expense-requests/{expenseRequestId}/history - Get Request Status History")
   class GetExpenseRequestStatusHistoryE2E {
 
     @Test
@@ -1793,7 +1800,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1803,7 +1810,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // when - retrieve status history
       ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              baseUrl() + "/api/expense-requests/{requestId}/history",
               ExpenseRequestHistoryDto[].class,
               userId,
               requestId);
@@ -1856,7 +1863,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               createRequest,
               ExpenseRequestDto.class,
               userId);
@@ -1865,7 +1872,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       // when - cancel the request
       restTemplate.exchange(
-          baseUrl() + "/api/users/{userId}/expense-requests/{requestId}",
+          baseUrl() + "/api/expense-requests/{requestId}",
           org.springframework.http.HttpMethod.DELETE,
           null,
           ExpenseRequestDto.class,
@@ -1875,7 +1882,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // then - retrieve history and verify cancellation was recorded
       ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
+              baseUrl() + "/api/expense-requests/{requestId}/history",
               ExpenseRequestHistoryDto[].class,
               userId,
               requestId);
@@ -1897,23 +1904,22 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       String userId = "history-user-3";
       Long nonExistentRequestId = 99999L;
 
-      // when
-      ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
-          restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/{requestId}/history",
-              ExpenseRequestHistoryDto[].class,
-              userId,
-              nonExistentRequestId);
+            HttpClientErrorException.NotFound exception =
+                    assertThrows(
+                            HttpClientErrorException.NotFound.class,
+                            () ->
+                                    restTemplate.getForEntity(
+                                            baseUrl() + "/api/expense-requests/{requestId}/history",
+                                            ExpenseRequestHistoryDto[].class,
+                                            userId,
+                                            nonExistentRequestId));
 
-      // then
-      assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
-      assertNotNull(historyResponse.getBody());
-      assertEquals(0, historyResponse.getBody().length);
+            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
     }
   }
 
   @Nested
-  @DisplayName("GET /api/users/{userId}/expense-requests/history/all - Get User Expense History")
+  @DisplayName("GET /api/expense-requests/history/all - Get User Expense History")
   class GetUserExpenseRequestHistoryE2E {
 
     @Test
@@ -1950,7 +1956,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response1 =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               request1,
               ExpenseRequestDto.class,
               userId);
@@ -1966,7 +1972,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response2 =
           restTemplate.postForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests",
+              baseUrl() + "/api/expense-requests",
               request2,
               ExpenseRequestDto.class,
               userId);
@@ -1974,7 +1980,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       // Cancel the first request to add another history entry
       restTemplate.exchange(
-          baseUrl() + "/api/users/{userId}/expense-requests/{requestId}",
+          baseUrl() + "/api/expense-requests/{requestId}",
           org.springframework.http.HttpMethod.DELETE,
           null,
           ExpenseRequestDto.class,
@@ -1984,8 +1990,9 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // when - retrieve all history for user
       ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/" + userId + "/expense-requests/history/all",
-              ExpenseRequestHistoryDto[].class);
+              baseUrl() + "/api/expense-requests/history/all",
+              ExpenseRequestHistoryDto[].class,
+              userId);
 
       // then - verify all history entries are returned
       assertEquals(HttpStatus.OK, historyResponse.getStatusCode());
@@ -2020,7 +2027,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // when
       ResponseEntity<ExpenseRequestHistoryDto[]> historyResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/{userId}/expense-requests/history/all",
+              baseUrl() + "/api/expense-requests/history/all",
               ExpenseRequestHistoryDto[].class,
               userId);
 
@@ -2064,7 +2071,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               LocalDateTime.of(2026, 4, 5, 0, 0, 0));
 
       restTemplate.postForEntity(
-          baseUrl() + "/api/users/{userId}/expense-requests",
+          baseUrl() + "/api/expense-requests",
           user1Request,
           ExpenseRequestDto.class,
           user1);
@@ -2077,7 +2084,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               LocalDateTime.of(2026, 4, 10, 0, 0, 0));
 
       restTemplate.postForEntity(
-          baseUrl() + "/api/users/{userId}/expense-requests",
+          baseUrl() + "/api/expense-requests",
           user2Request,
           ExpenseRequestDto.class,
           user2);
@@ -2085,13 +2092,15 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // when - retrieve history for each user
       ResponseEntity<ExpenseRequestHistoryDto[]> user1HistoryResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/" + user1 + "/expense-requests/history/all",
-              ExpenseRequestHistoryDto[].class);
+              baseUrl() + "/api/expense-requests/history/all",
+              ExpenseRequestHistoryDto[].class,
+              user1);
 
       ResponseEntity<ExpenseRequestHistoryDto[]> user2HistoryResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/users/" + user2 + "/expense-requests/history/all",
-              ExpenseRequestHistoryDto[].class);
+              baseUrl() + "/api/expense-requests/history/all",
+              ExpenseRequestHistoryDto[].class,
+              user2);
 
       // then - verify each user only sees their own history
       ExpenseRequestHistoryDto[] user1History = user1HistoryResponse.getBody();
@@ -2103,4 +2112,84 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals(user2, user2History[0].userId());
     }
   }
+
+    private static final class AuthenticatedRestTemplate {
+        private final RestTemplate delegate;
+
+        private AuthenticatedRestTemplate(RestTemplate delegate) {
+            this.delegate = delegate;
+        }
+
+        <T> ResponseEntity<T> postForEntity(
+                String url, Object request, Class<T> responseType, Object... uriVariables) {
+            return exchange(url, HttpMethod.POST, new HttpEntity<>(request), responseType, uriVariables);
+        }
+
+        <T> ResponseEntity<T> getForEntity(String url, Class<T> responseType, Object... uriVariables) {
+            return exchange(url, HttpMethod.GET, null, responseType, uriVariables);
+        }
+
+        <T> ResponseEntity<T> exchange(
+                String url,
+                HttpMethod method,
+                HttpEntity<?> requestEntity,
+                Class<T> responseType,
+                Object... uriVariables) {
+            RequestContext requestContext = buildRequestContext(url, requestEntity, uriVariables);
+            return delegate.exchange(
+                    requestContext.url(),
+                    method,
+                    requestContext.entity(),
+                    responseType,
+                    requestContext.uriVariables());
+        }
+
+        private RequestContext buildRequestContext(
+                String url, HttpEntity<?> requestEntity, Object... uriVariables) {
+            HttpHeaders headers = new HttpHeaders();
+            Object requestBody = null;
+
+            if (requestEntity != null) {
+                headers.putAll(requestEntity.getHeaders());
+                requestBody = requestEntity.getBody();
+            }
+
+            Object[] effectiveUriVariables = uriVariables == null ? new Object[0] : uriVariables;
+            String userIdFromCall = null;
+            if (effectiveUriVariables.length > 0 && effectiveUriVariables[0] instanceof String firstVar) {
+                userIdFromCall = firstVar;
+                int placeholderCount = countPathVariables(url);
+                if (effectiveUriVariables.length > placeholderCount) {
+                    effectiveUriVariables = Arrays.copyOfRange(effectiveUriVariables, 1, effectiveUriVariables.length);
+                }
+            }
+
+            String normalizedUrl = normalizeLegacyUrl(url);
+            if (headers.getFirst(HttpHeaders.AUTHORIZATION) == null) {
+                headers.setBearerAuth(
+                        userIdFromCall != null ? userIdFromCall : IntegrationTestConfiguration.TEST_BEARER_TOKEN);
+            }
+
+            HttpEntity<?> authenticatedEntity =
+                    requestBody != null ? new HttpEntity<>(requestBody, headers) : new HttpEntity<>(headers);
+
+            return new RequestContext(normalizedUrl, authenticatedEntity, effectiveUriVariables);
+        }
+
+        private String normalizeLegacyUrl(String url) {
+            return url;
+        }
+
+        private int countPathVariables(String url) {
+            Matcher matcher = Pattern.compile("\\{[^/]+\\}").matcher(url);
+            int count = 0;
+            while (matcher.find()) {
+                count++;
+            }
+            return count;
+        }
+
+        private record RequestContext(String url, HttpEntity<?> entity, Object[] uriVariables) {}
+    }
 }
+

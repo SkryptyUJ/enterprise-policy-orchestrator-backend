@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -788,8 +789,11 @@ class ExpenseRequestServiceTest {
     @DisplayName("should retrieve status history for a specific expense request")
     void shouldGetExpenseRequestStatusHistory() {
       // given
+      String userId = "user123";
       Long requestId = 1L;
       LocalDateTime now = LocalDateTime.now();
+
+      ExpenseRequest request = ExpenseRequest.builder().id(requestId).userId(userId).build();
 
       ExpenseRequestHistory history1 =
           ExpenseRequestHistory.builder()
@@ -816,10 +820,11 @@ class ExpenseRequestServiceTest {
       when(expenseRequestHistoryRepository.findByRequestId(
               requestId, Sort.by(Sort.Direction.DESC, "changedAt")))
           .thenReturn(List.of(history2, history1));
+        when(expenseRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
 
       // when
       List<ExpenseRequestHistoryDto> result =
-          expenseRequestService.getExpenseRequestStatusHistory(requestId);
+          expenseRequestService.getExpenseRequestStatusHistory(userId, requestId);
 
       // then
       assertThat(result).hasSize(2);
@@ -877,14 +882,17 @@ class ExpenseRequestServiceTest {
     @DisplayName("should return empty list when no history exists")
     void shouldReturnEmptyListWhenNoHistory() {
       // given
+      String userId = "user123";
       Long requestId = 999L;
+      ExpenseRequest request = ExpenseRequest.builder().id(requestId).userId(userId).build();
       when(expenseRequestHistoryRepository.findByRequestId(
               requestId, Sort.by(Sort.Direction.DESC, "changedAt")))
           .thenReturn(List.of());
+      when(expenseRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
 
       // when
       List<ExpenseRequestHistoryDto> result =
-          expenseRequestService.getExpenseRequestStatusHistory(requestId);
+        expenseRequestService.getExpenseRequestStatusHistory(userId, requestId);
 
       // then
       assertThat(result).isEmpty();

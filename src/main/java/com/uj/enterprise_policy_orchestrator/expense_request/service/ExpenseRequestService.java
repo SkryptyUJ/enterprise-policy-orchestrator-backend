@@ -151,13 +151,7 @@ public class ExpenseRequestService {
 
   @Transactional(readOnly = true)
   public ExpenseRequestDto getExpenseRequestById(String userId, Long requestId) {
-    ExpenseRequest request =
-        expenseRequestRepository
-            .findById(requestId)
-            .orElseThrow(
-                () ->
-                    new jakarta.persistence.EntityNotFoundException(
-                        "Expense request not found with id: " + requestId));
+    ExpenseRequest request = getExpenseRequestOrThrow(requestId);
 
     if (!request.getUserId().equals(userId)) {
       throw new jakarta.persistence.EntityNotFoundException(
@@ -167,8 +161,24 @@ public class ExpenseRequestService {
     return toDto(request);
   }
 
+  private ExpenseRequest getExpenseRequestOrThrow(Long requestId) {
+    return expenseRequestRepository
+        .findById(requestId)
+        .orElseThrow(
+            () ->
+                new jakarta.persistence.EntityNotFoundException(
+                    "Expense request not found with id: " + requestId));
+  }
+
   @Transactional(readOnly = true)
-  public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(Long requestId) {
+  public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(String userId, Long requestId) {
+    ExpenseRequest request = getExpenseRequestOrThrow(requestId);
+
+    if (!request.getUserId().equals(userId)) {
+      throw new jakarta.persistence.EntityNotFoundException(
+          "Expense request not found with id: " + requestId);
+    }
+
     return expenseRequestHistoryRepository
         .findByRequestId(requestId, Sort.by(Sort.Direction.DESC, "changedAt"))
         .stream()
