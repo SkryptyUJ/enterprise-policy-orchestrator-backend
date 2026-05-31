@@ -1,6 +1,7 @@
-package com.uj.enterprise_policy_orchestrator.domain;
+package com.uj.enterprise_policy_orchestrator.expense_request;
 
-import com.uj.enterprise_policy_orchestrator.domain.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseRequestStatus;
+import com.uj.enterprise_policy_orchestrator.policy.Policy;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -51,6 +52,19 @@ public class ExpenseRequest {
       joinColumns = @JoinColumn(name = "request_id"),
       inverseJoinColumns = @JoinColumn(name = "policy_id"))
   private final Set<Policy> applicablePolicies = new HashSet<>();
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "applied_policy_id")
+  private Policy appliedPolicy;
+
+  @Column(name = "decision_rationale", columnDefinition = "TEXT")
+  private String decisionRationale;
+
+  @Column(name = "decided_by")
+  private String decidedBy;
+
+  @Column(name = "decided_at")
+  private LocalDateTime decidedAt;
 
   @PrePersist
   protected void onCreate() {

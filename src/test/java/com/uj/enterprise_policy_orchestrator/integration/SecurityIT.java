@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.uj.enterprise_policy_orchestrator.dto.CreatePolicyDto;
-import com.uj.enterprise_policy_orchestrator.dto.PolicyDto;
+import com.uj.enterprise_policy_orchestrator.policy.dto.CreatePolicyDto;
+import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -34,8 +34,7 @@ class SecurityIT extends AbstractIntegrationTest {
         assertThrows(
             HttpClientErrorException.Unauthorized.class,
             () ->
-                anonymousRestTemplate.getForEntity(
-                    baseUrl() + "/api/users/{userId}/policies", PolicyDto[].class, "user-anon"));
+          anonymousRestTemplate.getForEntity(baseUrl() + "/api/policies", PolicyDto[].class));
     assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
   }
 
@@ -59,10 +58,9 @@ class SecurityIT extends AbstractIntegrationTest {
             HttpClientErrorException.Unauthorized.class,
             () ->
                 anonymousRestTemplate.postForEntity(
-                    baseUrl() + "/api/users/{userId}/policies",
+            baseUrl() + "/api/policies",
                     request,
-                    PolicyDto.class,
-                    "user-anon"));
+            PolicyDto.class));
     assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
   }
 
@@ -74,11 +72,10 @@ class SecurityIT extends AbstractIntegrationTest {
     headers.setContentType(MediaType.APPLICATION_JSON);
     ResponseEntity<PolicyDto[]> response =
         anonymousRestTemplate.exchange(
-            baseUrl() + "/api/users/{userId}/policies",
+        baseUrl() + "/api/policies",
             HttpMethod.GET,
             new HttpEntity<>(headers),
-            PolicyDto[].class,
-            "user-with-token");
+        PolicyDto[].class);
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertNotNull(response.getBody());
   }
@@ -92,11 +89,10 @@ class SecurityIT extends AbstractIntegrationTest {
     headers.add("Access-Control-Request-Headers", "authorization,content-type");
     ResponseEntity<Void> response =
         anonymousRestTemplate.exchange(
-            baseUrl() + "/api/users/{userId}/policies",
+        baseUrl() + "/api/policies",
             HttpMethod.OPTIONS,
             new HttpEntity<>(headers),
-            Void.class,
-            "user-preflight");
+        Void.class);
     assertEquals(HttpStatus.OK, response.getStatusCode());
   }
 }

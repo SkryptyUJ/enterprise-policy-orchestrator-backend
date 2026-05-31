@@ -1,6 +1,6 @@
-package com.uj.enterprise_policy_orchestrator.repository;
+package com.uj.enterprise_policy_orchestrator.policy.repository;
 
-import com.uj.enterprise_policy_orchestrator.domain.Policy;
+import com.uj.enterprise_policy_orchestrator.policy.Policy;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +29,15 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
       @Param("category") String category,
       @Param("expenseDate") LocalDateTime expenseDate,
       @Param("amount") BigDecimal amount);
+
+  @Query(
+      "SELECT p FROM Policy p "
+          + "WHERE p.startsAt <= :expenseDate "
+          + "AND (p.expiresAt IS NULL OR p.expiresAt >= :expenseDate) "
+          + "AND (p.minPrice IS NULL OR p.minPrice <= :amount) "
+          + "AND (p.maxPrice IS NULL OR p.maxPrice >= :amount)")
+  List<Policy> findByDateAndAmount(
+      @Param("expenseDate") LocalDateTime expenseDate, @Param("amount") BigDecimal amount);
 
   @Query(
       "SELECT p FROM Policy p WHERE p.startsAt <= :now"
