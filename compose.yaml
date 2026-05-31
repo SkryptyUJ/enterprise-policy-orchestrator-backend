@@ -2,6 +2,7 @@ services:
   postgres:
     image: 'postgres:latest'
     environment:
+      TZ: Europe/Warsaw
       POSTGRES_DB: mydatabase
       POSTGRES_PASSWORD: secret
       POSTGRES_USER: myuser
@@ -18,6 +19,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
+      TZ: Europe/Warsaw
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: mydatabase
