@@ -1,6 +1,8 @@
 spring:
   application:
     name: enterprise-policy-orchestrator-backend
+  jackson:
+    time-zone: Europe/Warsaw
   datasource:
     driver-class-name: org.postgresql.Driver
   jpa:
@@ -11,4 +13,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          time_zone: Europe/Warsaw
 
