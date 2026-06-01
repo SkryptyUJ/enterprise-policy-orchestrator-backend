@@ -13,11 +13,17 @@ import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto
 import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -45,6 +51,7 @@ public class ExpenseRequestService {
             .expenseDate(dto.expenseDate())
             .build();
 
+    Set<Policy> policiesMatchingCategoryAndDate = findPoliciesMatchingCategoryAndDate(request);
     Set<Policy> applicablePolicies = findApplicablePolicies(request);
     if (applicablePolicies.isEmpty()) {
       request.setStatus(ExpenseRequestStatus.DECLINED);
@@ -53,10 +60,22 @@ public class ExpenseRequestService {
     }
 
     request.getApplicablePolicies().addAll(applicablePolicies);
+    Set<String> conflictingPolicyNames =
+        findConflictingPolicyNames(policiesMatchingCategoryAndDate, applicablePolicies);
+    if (!conflictingPolicyNames.isEmpty()) {
+      request.setStatus(ExpenseRequestStatus.REQUIRES_ESCALATION);
+      request.getConflictingPolicyNames().addAll(conflictingPolicyNames);
+    }
 
     ExpenseRequest saved = expenseRequestRepository.save(request);
 
-    recordHistory(saved.getId(), userId, null, saved.getStatus(), "Expense request created");
+    String creationReason =
+        conflictingPolicyNames.isEmpty()
+            ? "Expense request created"
+            : "Expense request escalated due to policy conflict: "
+                + String.join(" vs ", conflictingPolicyNames);
+
+    recordHistory(saved.getId(), userId, null, saved.getStatus(), creationReason);
 
     return toDto(saved);
   }
@@ -71,6 +90,81 @@ public class ExpenseRequestService {
 
     return policyService.findApplicablePolicies(
         exp.getCategory(), expenseDateForMatching, exp.getAmount());
+  }
+
+  private Set<Policy> findPoliciesMatchingCategoryAndDate(ExpenseRequest exp) {
+    LocalDateTime expenseDateForMatching = exp.getExpenseDate();
+    if (expenseDateForMatching != null
+        && expenseDateForMatching.toLocalTime().equals(LocalTime.MIDNIGHT)) {
+      expenseDateForMatching = expenseDateForMatching.with(LocalTime.MAX);
+    }
+
+    List<Policy> policies =
+        policyRepository.findByCategoryAndDate(exp.getCategory(), expenseDateForMatching);
+
+    if (policies == null || policies.isEmpty()) {
+      return Set.of();
+    }
+
+    Comparator<Policy> latestVersionComparator =
+        Comparator.comparing(Policy::getVersion, Comparator.nullsFirst(Integer::compareTo))
+            .thenComparing(Policy::getUpdatedAt, Comparator.nullsFirst(LocalDateTime::compareTo));
+
+    Map<String, Policy> latestByPolicyId = new HashMap<>();
+    for (Policy policy : policies) {
+      Policy existing = latestByPolicyId.get(policy.getPolicyId());
+      if (existing == null || latestVersionComparator.compare(policy, existing) > 0) {
+        latestByPolicyId.put(policy.getPolicyId(), policy);
+      }
+    }
+
+    return new LinkedHashSet<>(latestByPolicyId.values());
+  }
+
+  private Set<String> findConflictingPolicyNames(
+      Set<Policy> policiesMatchingCategoryAndDate, Set<Policy> applicablePolicies) {
+    if (policiesMatchingCategoryAndDate.isEmpty() || applicablePolicies.isEmpty()) {
+      return Set.of();
+    }
+
+    Set<String> applicablePolicyIds =
+        applicablePolicies.stream().map(Policy::getPolicyId).collect(Collectors.toSet());
+
+    Optional<Policy> matchingPolicy = applicablePolicies.stream().min(this::comparePolicyDisplay);
+    Optional<Policy> nonMatchingPolicy =
+        policiesMatchingCategoryAndDate.stream()
+            .filter(policy -> !applicablePolicyIds.contains(policy.getPolicyId()))
+            .min(this::comparePolicyDisplay);
+
+    if (matchingPolicy.isEmpty() || nonMatchingPolicy.isEmpty()) {
+      return Set.of();
+    }
+
+    Set<String> conflicts = new LinkedHashSet<>();
+    conflicts.add(resolvePolicyDisplayName(matchingPolicy.get()));
+    conflicts.add(resolvePolicyDisplayName(nonMatchingPolicy.get()));
+    return conflicts;
+  }
+
+  private int comparePolicyDisplay(Policy left, Policy right) {
+    String leftDisplay = resolvePolicyDisplayName(left);
+    String rightDisplay = resolvePolicyDisplayName(right);
+
+    int byName = leftDisplay.compareToIgnoreCase(rightDisplay);
+    if (byName != 0) {
+      return byName;
+    }
+
+    String leftPolicyId = left.getPolicyId() == null ? "" : left.getPolicyId();
+    String rightPolicyId = right.getPolicyId() == null ? "" : right.getPolicyId();
+    return leftPolicyId.compareToIgnoreCase(rightPolicyId);
+  }
+
+  private String resolvePolicyDisplayName(Policy policy) {
+    if (policy.getName() != null && !policy.getName().isBlank()) {
+      return policy.getName();
+    }
+    return policy.getPolicyId() == null ? "Unknown policy" : policy.getPolicyId();
   }
 
   private String buildNoMatchingPoliciesMessage(
@@ -130,11 +224,12 @@ public class ExpenseRequestService {
       throw new IllegalArgumentException("Expense request does not belong to user: " + userId);
     }
 
-    if (request.getStatus() != ExpenseRequestStatus.WAITING_FOR_APPROVAL) {
+    if (!isPendingReviewStatus(request.getStatus())) {
       throw new IllegalArgumentException(
           "Expense request cannot be cancelled with status: " + request.getStatus());
     }
 
+    ExpenseRequestStatus previousStatus = request.getStatus();
     request.setStatus(ExpenseRequestStatus.CANCELLED);
     ExpenseRequest cancelled = expenseRequestRepository.save(request);
 
@@ -142,7 +237,7 @@ public class ExpenseRequestService {
     recordHistory(
         cancelled.getId(),
         userId,
-        ExpenseRequestStatus.WAITING_FOR_APPROVAL,
+        previousStatus,
         ExpenseRequestStatus.CANCELLED,
         "Expense request cancelled by user");
 
@@ -223,7 +318,7 @@ public class ExpenseRequestService {
                     new IllegalArgumentException(
                         "Expense request not found with id: " + expenseRequestId));
 
-    if (request.getStatus() != ExpenseRequestStatus.WAITING_FOR_APPROVAL) {
+    if (!isPendingReviewStatus(request.getStatus())) {
       throw new IllegalArgumentException(
           "Expense request cannot be approved with status: " + request.getStatus());
     }
@@ -262,7 +357,7 @@ public class ExpenseRequestService {
                     new IllegalArgumentException(
                         "Expense request not found with id: " + expenseRequestId));
 
-    if (request.getStatus() != ExpenseRequestStatus.WAITING_FOR_APPROVAL) {
+    if (!isPendingReviewStatus(request.getStatus())) {
       throw new IllegalArgumentException(
           "Expense request cannot be declined with status: " + request.getStatus());
     }
@@ -315,7 +410,17 @@ public class ExpenseRequestService {
         entity.getChangeReason());
   }
 
+  private boolean isPendingReviewStatus(ExpenseRequestStatus status) {
+    return status == ExpenseRequestStatus.WAITING_FOR_APPROVAL
+        || status == ExpenseRequestStatus.REQUIRES_ESCALATION;
+  }
+
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
+    List<String> conflictingPolicyNames =
+        entity.getConflictingPolicyNames().isEmpty()
+            ? null
+            : entity.getConflictingPolicyNames().stream().sorted().toList();
+
     return new ExpenseRequestDto(
         entity.getId(),
         entity.getUserId(),
@@ -326,6 +431,7 @@ public class ExpenseRequestService {
         entity.getSubmittedAt(),
         entity.getStatus(),
         entity.getAppliedPolicy() != null ? policyService.toDto(entity.getAppliedPolicy()) : null,
+        conflictingPolicyNames,
         entity.getDecisionRationale(),
         entity.getDecidedBy(),
         entity.getDecidedAt());

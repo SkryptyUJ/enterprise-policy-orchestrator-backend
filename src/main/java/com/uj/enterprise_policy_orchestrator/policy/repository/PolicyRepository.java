@@ -32,6 +32,14 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
 
   @Query(
       "SELECT p FROM Policy p "
+          + "WHERE p.category = :category "
+          + "AND p.startsAt <= :expenseDate "
+          + "AND (p.expiresAt IS NULL OR p.expiresAt >= :expenseDate)")
+  List<Policy> findByCategoryAndDate(
+      @Param("category") String category, @Param("expenseDate") LocalDateTime expenseDate);
+
+  @Query(
+      "SELECT p FROM Policy p "
           + "WHERE p.startsAt <= :expenseDate "
           + "AND (p.expiresAt IS NULL OR p.expiresAt >= :expenseDate) "
           + "AND (p.minPrice IS NULL OR p.minPrice <= :amount) "

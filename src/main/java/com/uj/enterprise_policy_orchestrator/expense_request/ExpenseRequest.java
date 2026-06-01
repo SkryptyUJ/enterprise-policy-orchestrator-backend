@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -52,6 +53,13 @@ public class ExpenseRequest {
       joinColumns = @JoinColumn(name = "request_id"),
       inverseJoinColumns = @JoinColumn(name = "policy_id"))
   private final Set<Policy> applicablePolicies = new HashSet<>();
+
+    @ElementCollection
+    @CollectionTable(
+      name = "expense_request_conflicting_policy",
+      joinColumns = @JoinColumn(name = "request_id"))
+    @Column(name = "policy_name", nullable = false)
+    private final Set<String> conflictingPolicyNames = new LinkedHashSet<>();
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "applied_policy_id")
