@@ -1,3 +1,3 @@
 package com.uj.enterprise_policy_orchestrator.category.dto;
 
-public record CategoryOptionDto(Integer id, String label) {}
+public record CategoryUpsertDto(String label) {}

@@ -1,6 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.expense_request.service;
 
-import com.uj.enterprise_policy_orchestrator.category.enums.ExpenseCategory;
+import com.uj.enterprise_policy_orchestrator.category.service.CategoryService;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequestHistory;
@@ -31,16 +31,17 @@ public class ExpenseRequestService {
   private final ExpenseRequestHistoryRepository expenseRequestHistoryRepository;
   private final PolicyRepository policyRepository;
   private final PolicyService policyService;
+  private final CategoryService categoryService;
 
   @Transactional
   public ExpenseRequestDto createExpenseRequest(String userId, CreateExpenseRequestDto dto) {
-    String normalizedCategory = ExpenseCategory.normalize(dto.category());
+    categoryService.getCategory(dto.categoryId());
 
     ExpenseRequest request =
         ExpenseRequest.builder()
             .userId(userId)
             .amount(dto.amount())
-            .category(normalizedCategory)
+            .categoryId(dto.categoryId())
             .description(dto.description())
             .expenseDate(dto.expenseDate())
             .build();
@@ -48,8 +49,7 @@ public class ExpenseRequestService {
     Set<Policy> applicablePolicies = findApplicablePolicies(request);
     if (applicablePolicies.isEmpty()) {
       request.setStatus(ExpenseRequestStatus.DECLINED);
-      throw new NoApplicablePoliciesException(
-          buildNoMatchingPoliciesMessage(request, dto.category()));
+      throw new NoApplicablePoliciesException(buildNoMatchingPoliciesMessage(request));
     }
 
     request.getApplicablePolicies().addAll(applicablePolicies);
@@ -70,11 +70,10 @@ public class ExpenseRequestService {
     }
 
     return policyService.findApplicablePolicies(
-        exp.getCategory(), expenseDateForMatching, exp.getAmount());
+        exp.getCategoryId(), expenseDateForMatching, exp.getAmount());
   }
 
-  private String buildNoMatchingPoliciesMessage(
-      ExpenseRequest request, String requestedCategoryRaw) {
+  private String buildNoMatchingPoliciesMessage(ExpenseRequest request) {
     LocalDateTime expenseDateForMatching = request.getExpenseDate();
     if (expenseDateForMatching != null
         && expenseDateForMatching.toLocalTime().equals(LocalTime.MIDNIGHT)) {
@@ -85,14 +84,15 @@ public class ExpenseRequestService {
         policyRepository.findByDateAndAmount(expenseDateForMatching, request.getAmount());
 
     Set<String> availableCategories = new LinkedHashSet<>();
-    matchingDateAndAmount.stream().map(Policy::getCategory).forEach(availableCategories::add);
+    matchingDateAndAmount.stream()
+        .map(policy -> categoryService.getCategoryLabel(policy.getCategoryId()))
+        .forEach(availableCategories::add);
 
     if (availableCategories.isEmpty()) {
       return "Decline, no matching policies";
     }
 
-    String categoryForMessage =
-        requestedCategoryRaw == null ? request.getCategory() : requestedCategoryRaw;
+    String categoryForMessage = categoryService.getCategoryLabel(request.getCategoryId());
 
     return "Decline, no matching policies for category '"
         + categoryForMessage
@@ -171,7 +171,8 @@ public class ExpenseRequestService {
   }
 
   @Transactional(readOnly = true)
-  public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(String userId, Long requestId) {
+  public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(
+      String userId, Long requestId) {
     ExpenseRequest request = getExpenseRequestOrThrow(requestId);
 
     if (!request.getUserId().equals(userId)) {
@@ -320,7 +321,8 @@ public class ExpenseRequestService {
         entity.getId(),
         entity.getUserId(),
         entity.getAmount(),
-        entity.getCategory(),
+        entity.getCategoryId(),
+        categoryService.getCategoryLabel(entity.getCategoryId()),
         entity.getDescription(),
         entity.getExpenseDate(),
         entity.getSubmittedAt(),
