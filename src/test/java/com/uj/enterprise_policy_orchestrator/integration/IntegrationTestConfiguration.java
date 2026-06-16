@@ -47,8 +47,8 @@ class IntegrationTestConfiguration {
 
   /**
    * Replaces the real Auth0-backed {@link JwtDecoder} for integration tests so we don't make
-  * network calls to Auth0. Accepts any non-empty token and produces a {@link Jwt} whose subject
-  * matches the token value.
+   * network calls to Auth0. Accepts any non-empty token and produces a {@link Jwt} whose subject
+   * matches the token value.
    */
   @Bean
   @Primary
@@ -61,10 +61,14 @@ class IntegrationTestConfiguration {
           now.plusSeconds(3600),
           Map.of("alg", "none"),
           Map.of(
-              "sub", token,
-              "iss", "https://test-issuer/",
-              "aud", List.of("test-audience"),
-              "scope", "read write"));
+              "sub",
+              token,
+              "iss",
+              "https://test-issuer/",
+              "aud",
+              List.of("test-audience"),
+              "scope",
+              "read write"));
     };
   }
 }

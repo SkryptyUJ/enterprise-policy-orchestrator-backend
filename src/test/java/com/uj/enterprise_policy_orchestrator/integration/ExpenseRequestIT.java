@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,16 +42,16 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
   @Autowired private ExpenseRequestRepository expenseRequestRepository;
   @Autowired private ExpenseRequestHistoryRepository expenseRequestHistoryRepository;
   @Autowired private PolicyRepository policyRepository;
-    @Autowired private RestTemplate springRestTemplate;
+  @Autowired private RestTemplate springRestTemplate;
 
-    private AuthenticatedRestTemplate restTemplate;
+  private AuthenticatedRestTemplate restTemplate;
 
   @BeforeEach
   void setUp() {
     expenseRequestHistoryRepository.deleteAll();
     expenseRequestRepository.deleteAll();
     policyRepository.deleteAll();
-        restTemplate = new AuthenticatedRestTemplate(springRestTemplate);
+    restTemplate = new AuthenticatedRestTemplate(springRestTemplate);
   }
 
   @AfterEach
@@ -83,7 +83,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
       policyRepository.save(policy);
@@ -91,7 +90,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
-              "Travel",
+              1,
               "Flight to Krakow",
               LocalDateTime.of(2026, 3, 20, 0, 0, 0));
 
@@ -99,17 +98,14 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
       ExpenseRequestDto body = response.getBody();
       assertEquals(userId, body.userId());
       assertEquals(new BigDecimal("1500.00"), body.amount());
-      assertEquals("Travel", body.category());
+      assertEquals(1, body.categoryId());
       assertEquals("Flight to Krakow", body.description());
       assertEquals(LocalDateTime.of(2026, 3, 20, 0, 0, 0), body.expenseDate());
       assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, body.status());
@@ -129,7 +125,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
           Policy.builder()
               .policyId("OFFICE-POLICY-001")
               .authorUserId("admin")
-              .categoryId(2)
+              .categoryId(1)
               .name("Office Supplies")
               .description("Office policy")
               .version(1)
@@ -137,7 +133,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("10"))
               .maxPrice(new BigDecimal("1000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -145,16 +140,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("250.00"),
-              "Travel",
+              1,
               "Office supplies - pens and paper",
               LocalDateTime.of(2026, 3, 15, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
@@ -176,7 +168,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
-              "NON-EXISTENT",
+              1,
               "Expense without matching policy",
               LocalDateTime.of(2026, 3, 20, 21, 37, 0));
 
@@ -203,7 +195,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
           Policy.builder()
               .policyId("BOUNDED-POLICY-001")
               .authorUserId("admin")
-              .categoryId(3)
+              .categoryId(1)
               .name("Bounded Policy")
               .description("Policy with bounds")
               .version(1)
@@ -211,7 +203,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("1000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -219,16 +210,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto minRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("100.00"),
-              "Travel",
+              1,
               "Minimum boundary test",
               LocalDateTime.of(2026, 3, 20, 12, 32, 23));
 
       ResponseEntity<ExpenseRequestDto> minResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              minRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", minRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, minResponse.getStatusCode());
       assertNotNull(minResponse.getBody());
@@ -237,7 +225,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto maxRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1000.00"),
-              "Travel",
+              1,
               "Maximum boundary test",
               LocalDateTime.of(2026, 3, 20, 4, 23, 3));
 
@@ -272,7 +260,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
 
@@ -288,7 +275,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("50"))
               .maxPrice(new BigDecimal("3000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
 
@@ -298,7 +284,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
-              "Travel",
+              1,
               "Multi-policy test",
               LocalDateTime.of(2026, 3, 20, 0, 0, 0));
 
@@ -337,7 +323,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(policyExpiresAt)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -345,16 +330,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("500.00"),
-              "Travel",
+              1,
               "Within policy validity",
               LocalDateTime.of(2026, 3, 15, 20, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
@@ -379,7 +361,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -387,16 +368,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("500.00"),
-              "Travel",
+              1,
               "Timestamp test",
               LocalDateTime.of(2026, 3, 20, 20, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
@@ -423,17 +401,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
 
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
-              new BigDecimal("500.00"),
-              "Travel",
-              "Test",
-              LocalDateTime.of(2026, 3, 20, 20, 0, 0, 0));
+              new BigDecimal("500.00"), 1, "Test", LocalDateTime.of(2026, 3, 20, 20, 0, 0, 0));
 
       for (String userId : new String[] {"user-A", "user-B", "user-C"}) {
         ResponseEntity<ExpenseRequestDto> response =
@@ -464,7 +438,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
           Policy.builder()
               .policyId("PRESERVE-POLICY-001")
               .authorUserId("admin")
-              .categoryId(5)
+              .categoryId(1)
               .name("Preserve Policy")
               .description("Policy")
               .version(1)
@@ -472,13 +446,12 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
 
       CreateExpenseRequestDto createRequest =
-          new CreateExpenseRequestDto(amount, "Travel", description, expenseDate);
+          new CreateExpenseRequestDto(amount, 1, description, expenseDate);
 
       assertEquals(
           HttpStatus.CREATED,
@@ -494,7 +467,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       var savedRequest = expenseRequests.getFirst();
       assertEquals(userId, savedRequest.getUserId());
       assertEquals(0, savedRequest.getAmount().compareTo(amount));
-      assertEquals("Travel", savedRequest.getCategory());
+      assertEquals(1, savedRequest.getCategoryId());
       assertEquals(expenseDate, savedRequest.getExpenseDate());
     }
 
@@ -518,7 +491,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("2")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -528,7 +500,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       String jsonBody =
           """
-          {"amount":1500.00,"category":"Podroze sluzbowe","description":"Flight to Krakow","expenseDate":"2026-03-20"}
+          {"amount":1500.00,"categoryId":2,"description":"Flight to Krakow","expenseDate":"2026-03-20"}
           """;
 
       ResponseEntity<ExpenseRequestDto> response =
@@ -541,12 +513,12 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
-      assertEquals("2", response.getBody().category());
+      assertEquals(2, response.getBody().categoryId());
       assertEquals(LocalDateTime.of(2026, 3, 20, 0, 0, 0), response.getBody().expenseDate());
       assertNotNull(response.getBody().submittedAt());
 
       var savedRequest = expenseRequestRepository.findAllWithApplicablePolicies().getFirst();
-      assertEquals("2", savedRequest.getCategory());
+      assertEquals(2, savedRequest.getCategoryId());
       assertEquals(LocalDateTime.of(2026, 3, 20, 0, 0, 0), savedRequest.getExpenseDate());
     }
   }
@@ -573,53 +545,32 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("10"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
 
       CreateExpenseRequestDto request1 =
           new CreateExpenseRequestDto(
-              new BigDecimal("100.00"),
-              "Travel",
-              "Request 1",
-              LocalDateTime.of(2026, 3, 20, 10, 0, 0));
+              new BigDecimal("100.00"), 1, "Request 1", LocalDateTime.of(2026, 3, 20, 10, 0, 0));
       CreateExpenseRequestDto request2 =
           new CreateExpenseRequestDto(
-              new BigDecimal("200.00"),
-              "Travel",
-              "Request 2",
-              LocalDateTime.of(2026, 3, 21, 10, 0, 0));
+              new BigDecimal("200.00"), 1, "Request 2", LocalDateTime.of(2026, 3, 21, 10, 0, 0));
       CreateExpenseRequestDto request3 =
           new CreateExpenseRequestDto(
-              new BigDecimal("300.00"),
-              "Travel",
-              "Request 3",
-              LocalDateTime.of(2026, 3, 22, 10, 0, 0));
+              new BigDecimal("300.00"), 1, "Request 3", LocalDateTime.of(2026, 3, 22, 10, 0, 0));
 
       restTemplate.postForEntity(
-          baseUrl() + "/api/expense-requests",
-          request1,
-          ExpenseRequestDto.class,
-          userId);
+          baseUrl() + "/api/expense-requests", request1, ExpenseRequestDto.class, userId);
       Thread.sleep(20);
       restTemplate.postForEntity(
-          baseUrl() + "/api/expense-requests",
-          request2,
-          ExpenseRequestDto.class,
-          userId);
+          baseUrl() + "/api/expense-requests", request2, ExpenseRequestDto.class, userId);
       Thread.sleep(20);
       restTemplate.postForEntity(
-          baseUrl() + "/api/expense-requests",
-          request3,
-          ExpenseRequestDto.class,
-          userId);
+          baseUrl() + "/api/expense-requests", request3, ExpenseRequestDto.class, userId);
 
       ResponseEntity<ExpenseRequestDto[]> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/expense-requests",
-              ExpenseRequestDto[].class,
-              userId);
+              baseUrl() + "/api/expense-requests", ExpenseRequestDto[].class, userId);
 
       assertEquals(HttpStatus.OK, response.getStatusCode());
       ExpenseRequestDto[] history = response.getBody();
@@ -654,7 +605,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("10"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -662,16 +612,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("250.00"),
-              "Travel",
+              1,
               "Conference taxi",
               LocalDateTime.of(2026, 4, 1, 8, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
 
@@ -707,7 +654,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("10"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -715,16 +661,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("250.00"),
-              "Travel",
+              1,
               "Conference taxi",
               LocalDateTime.of(2026, 4, 1, 8, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       Long requestId = Objects.requireNonNull(createResponse.getBody()).id();
 
@@ -756,14 +699,14 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto olderRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("210.00"),
-              "Travel",
+              1,
               "Older review request",
               LocalDateTime.of(2026, 5, 1, 10, 0, 0));
 
       CreateExpenseRequestDto newerRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("320.00"),
-              "Travel",
+              1,
               "Newer review request",
               LocalDateTime.of(2026, 5, 2, 10, 0, 0));
 
@@ -781,9 +724,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto[]> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/expense-requests/review",
-              ExpenseRequestDto[].class,
-              reviewerId);
+              baseUrl() + "/api/expense-requests/review", ExpenseRequestDto[].class, reviewerId);
 
       assertEquals(HttpStatus.OK, response.getStatusCode());
       ExpenseRequestDto[] body = response.getBody();
@@ -804,7 +745,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("450.00"),
-              "Travel",
+              1,
               "Request for review details",
               LocalDateTime.of(2026, 5, 3, 9, 0, 0));
 
@@ -841,7 +782,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("520.00"),
-              "Travel",
+              1,
               "Request for approve",
               LocalDateTime.of(2026, 5, 4, 10, 0, 0));
 
@@ -908,7 +849,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("640.00"),
-              "Travel",
+              1,
               "Request for decline",
               LocalDateTime.of(2026, 5, 5, 11, 0, 0));
 
@@ -975,7 +916,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("480.00"),
-              "Travel",
+              1,
               "Request for invalid approve",
               LocalDateTime.of(2026, 5, 6, 12, 0, 0));
 
@@ -1008,7 +949,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
                       requestId));
 
       assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
-      assertTrue(exception.getResponseBodyAsString().contains("Decision rationale must not be empty"));
+      assertTrue(
+          exception.getResponseBodyAsString().contains("Decision rationale must not be empty"));
 
       ExpenseRequest saved = expenseRequestRepository.findById(requestId).orElseThrow();
       assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, saved.getStatus());
@@ -1025,7 +967,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("510.00"),
-              "Travel",
+              1,
               "Request for invalid decline",
               LocalDateTime.of(2026, 5, 7, 13, 0, 0));
 
@@ -1088,7 +1030,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -1117,7 +1058,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -1125,7 +1065,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
-              "Meals",
+              4,
               "Lunch outside the policy category",
               LocalDateTime.of(2026, 3, 20, 12, 0, 0));
 
@@ -1140,8 +1080,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
                       userId));
 
       assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
-      assertTrue(exception.getResponseBodyAsString().contains("Meals"));
-      assertTrue(exception.getResponseBodyAsString().contains("Travel"));
+      assertTrue(exception.getResponseBodyAsString().contains("Posilki"));
+      assertTrue(exception.getResponseBodyAsString().contains("Sprzet biurowy"));
     }
   }
 
@@ -1167,7 +1107,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       Policy policy2 =
@@ -1182,7 +1121,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("50"))
               .maxPrice(new BigDecimal("3000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
       Policy policy3 =
@@ -1197,7 +1135,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("200"))
               .maxPrice(new BigDecimal("4000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
 
@@ -1206,16 +1143,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
-              "Travel",
+              1,
               "Multi-policy test",
               LocalDateTime.of(2026, 3, 20, 20, 11, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
 
@@ -1253,7 +1187,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(policyExpiresAt)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(expiredPolicy);
@@ -1270,7 +1203,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(activePolicy);
@@ -1278,16 +1210,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
-              "Travel",
+              1,
               "Expired policy test",
               LocalDateTime.of(2026, 3, 20, 20, 10, 34, 0));
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
 
@@ -1319,7 +1248,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("1000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -1327,16 +1255,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto minRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("100.00"),
-              "Travel",
+              1,
               "Exactly at minimum",
               LocalDateTime.of(2026, 3, 20, 20, 15, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> minResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              minRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", minRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, minResponse.getStatusCode());
       assertNotNull(minResponse.getBody());
@@ -1346,7 +1271,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto belowMinRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("99.99"),
-              "Travel",
+              1,
               "Below minimum",
               LocalDateTime.of(2026, 3, 20, 20, 50, 0, 0));
 
@@ -1381,7 +1306,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("1000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -1389,16 +1313,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto maxRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1000.00"),
-              "Travel",
+              1,
               "Exactly at maximum",
               LocalDateTime.of(2026, 3, 20, 20, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> maxResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              maxRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", maxRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, maxResponse.getStatusCode());
       assertNotNull(maxResponse.getBody());
@@ -1408,7 +1329,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto aboveMaxRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1000.01"),
-              "Travel",
+              1,
               "Above maximum",
               LocalDateTime.of(2026, 3, 20, 20, 0, 0, 0));
 
@@ -1443,7 +1364,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(null)
               .maxPrice(null)
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(unboundedPolicy);
@@ -1451,16 +1371,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("999999.99"),
-              "Travel",
+              1,
               "Very large expense",
               LocalDateTime.of(2026, 3, 20, 20, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
@@ -1469,8 +1386,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
   }
 
   @Nested
-  @DisplayName(
-      "DELETE /api/expense-requests/{expenseRequestId} - Cancel Expense Request")
+  @DisplayName("DELETE /api/expense-requests/{expenseRequestId} - Cancel Expense Request")
   class CancelExpenseRequestE2E {
 
     @Test
@@ -1492,7 +1408,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
       policyRepository.save(policy);
@@ -1500,16 +1415,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
-              "Travel",
+              1,
               "Flight to Warsaw",
               LocalDateTime.of(2026, 3, 20, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
       assertNotNull(createResponse.getBody());
@@ -1534,7 +1446,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals(userId, cancelledRequest.userId());
       assertEquals(ExpenseRequestStatus.CANCELLED, cancelledRequest.status());
       assertEquals(new BigDecimal("1500.00"), cancelledRequest.amount());
-      assertEquals("Travel", cancelledRequest.category());
+      assertEquals(1, cancelledRequest.categoryId());
 
       // verify in database
       ExpenseRequest savedRequest =
@@ -1586,7 +1498,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
       policyRepository.save(policy);
@@ -1594,16 +1505,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("800.00"),
-              "Travel",
+              1,
               "Hotel accommodation",
               LocalDateTime.of(2026, 4, 15, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              owner);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, owner);
 
       assertEquals(HttpStatus.CREATED, createResponse.getStatusCode());
       ExpenseRequestDto createdRequest = Objects.requireNonNull(createResponse.getBody());
@@ -1650,24 +1558,17 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
       policyRepository.save(policy);
 
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
-              new BigDecimal("600.00"),
-              "Travel",
-              "Car rental",
-              LocalDateTime.of(2026, 5, 1, 0, 0, 0));
+              new BigDecimal("600.00"), 1, "Car rental", LocalDateTime.of(2026, 5, 1, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       ExpenseRequestDto createdRequest = Objects.requireNonNull(createResponse.getBody());
       Long expenseRequestId = createdRequest.id();
@@ -1721,7 +1622,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
       policyRepository.save(policy);
@@ -1729,16 +1629,13 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
               new BigDecimal("2000.00"),
-              "Travel",
+              1,
               "Conference registration",
               LocalDateTime.of(2026, 6, 10, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       ExpenseRequestDto createdRequest = Objects.requireNonNull(createResponse.getBody());
       Long expenseRequestId = createdRequest.id();
@@ -1759,15 +1656,14 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals(ExpenseRequestStatus.CANCELLED, savedRequest.getStatus());
       assertEquals(userId, savedRequest.getUserId());
       assertEquals(new BigDecimal("2000.00"), savedRequest.getAmount());
-      assertEquals("Travel", savedRequest.getCategory());
+      assertEquals(1, savedRequest.getCategoryId());
       assertEquals("Conference registration", savedRequest.getDescription());
       assertEquals(LocalDateTime.of(2026, 6, 10, 0, 0, 0), savedRequest.getExpenseDate());
     }
   }
 
   @Nested
-  @DisplayName(
-      "GET /api/expense-requests/{expenseRequestId}/history - Get Request Status History")
+  @DisplayName("GET /api/expense-requests/{expenseRequestId}/history - Get Request Status History")
   class GetExpenseRequestStatusHistoryE2E {
 
     @Test
@@ -1789,21 +1685,17 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
 
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
-              new BigDecimal("1500.00"), "Travel", "History test request", now.minusDays(5));
+              new BigDecimal("1500.00"), 1, "History test request", now.minusDays(5));
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       Long requestId = createResponse.getBody().id();
 
@@ -1834,7 +1726,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
     @DisplayName("should track history when expense request is cancelled")
     void shouldTrackHistoryWhenRequestCancelled() {
       String userId = "history-user-2";
-      LocalDateTime now = LocalDateTime.now();
+      LocalDateTime expenseDate = LocalDateTime.of(2026, 5, 1, 0, 0, 0);
 
       // given - create policy and request
       Policy policy =
@@ -1845,28 +1737,21 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .name("Cancel History Policy")
               .description("Policy for cancel history testing")
               .version(1)
-              .startsAt(now.minusMonths(1))
+              .startsAt(expenseDate.minusMonths(1))
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
 
       CreateExpenseRequestDto createRequest =
           new CreateExpenseRequestDto(
-              new BigDecimal("800.00"),
-              "Travel",
-              "Request to cancel",
-              LocalDateTime.of(2026, 5, 1, 0, 0, 0));
+              new BigDecimal("800.00"), 1, "Request to cancel", expenseDate);
 
       ResponseEntity<ExpenseRequestDto> createResponse =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       Long requestId = createResponse.getBody().id();
 
@@ -1904,17 +1789,17 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       String userId = "history-user-3";
       Long nonExistentRequestId = 99999L;
 
-            HttpClientErrorException.NotFound exception =
-                    assertThrows(
-                            HttpClientErrorException.NotFound.class,
-                            () ->
-                                    restTemplate.getForEntity(
-                                            baseUrl() + "/api/expense-requests/{requestId}/history",
-                                            ExpenseRequestHistoryDto[].class,
-                                            userId,
-                                            nonExistentRequestId));
+      HttpClientErrorException.NotFound exception =
+          assertThrows(
+              HttpClientErrorException.NotFound.class,
+              () ->
+                  restTemplate.getForEntity(
+                      baseUrl() + "/api/expense-requests/{requestId}/history",
+                      ExpenseRequestHistoryDto[].class,
+                      userId,
+                      nonExistentRequestId));
 
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+      assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
     }
   }
 
@@ -1941,7 +1826,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -1949,33 +1833,24 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // Create first request
       CreateExpenseRequestDto request1 =
           new CreateExpenseRequestDto(
-              new BigDecimal("500.00"),
-              "Travel",
-              "First request",
-              LocalDateTime.of(2026, 4, 1, 0, 0, 0));
+              new BigDecimal("500.00"), 1, "First request", LocalDateTime.of(2026, 4, 1, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> response1 =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              request1,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", request1, ExpenseRequestDto.class, userId);
       Long requestId1 = response1.getBody().id();
 
       // Create second request
       CreateExpenseRequestDto request2 =
           new CreateExpenseRequestDto(
               new BigDecimal("750.00"),
-              "Travel",
+              1,
               "Second request",
               LocalDateTime.of(2026, 4, 15, 0, 0, 0));
 
       ResponseEntity<ExpenseRequestDto> response2 =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              request2,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", request2, ExpenseRequestDto.class, userId);
       Long requestId2 = response2.getBody().id();
 
       // Cancel the first request to add another history entry
@@ -2057,7 +1932,6 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
               .expiresAt(null)
               .minPrice(new BigDecimal("100"))
               .maxPrice(new BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
       policyRepository.save(policy);
@@ -2065,29 +1939,20 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       // Create requests from different users
       CreateExpenseRequestDto user1Request =
           new CreateExpenseRequestDto(
-              new BigDecimal("600.00"),
-              "Travel",
-              "User 1 request",
-              LocalDateTime.of(2026, 4, 5, 0, 0, 0));
+              new BigDecimal("600.00"), 1, "User 1 request", LocalDateTime.of(2026, 4, 5, 0, 0, 0));
 
       restTemplate.postForEntity(
-          baseUrl() + "/api/expense-requests",
-          user1Request,
-          ExpenseRequestDto.class,
-          user1);
+          baseUrl() + "/api/expense-requests", user1Request, ExpenseRequestDto.class, user1);
 
       CreateExpenseRequestDto user2Request =
           new CreateExpenseRequestDto(
               new BigDecimal("400.00"),
-              "Travel",
+              1,
               "User 2 request",
               LocalDateTime.of(2026, 4, 10, 0, 0, 0));
 
       restTemplate.postForEntity(
-          baseUrl() + "/api/expense-requests",
-          user2Request,
-          ExpenseRequestDto.class,
-          user2);
+          baseUrl() + "/api/expense-requests", user2Request, ExpenseRequestDto.class, user2);
 
       // when - retrieve history for each user
       ResponseEntity<ExpenseRequestHistoryDto[]> user1HistoryResponse =
@@ -2113,83 +1978,85 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
     }
   }
 
-    private static final class AuthenticatedRestTemplate {
-        private final RestTemplate delegate;
+  private static final class AuthenticatedRestTemplate {
+    private final RestTemplate delegate;
 
-        private AuthenticatedRestTemplate(RestTemplate delegate) {
-            this.delegate = delegate;
-        }
-
-        <T> ResponseEntity<T> postForEntity(
-                String url, Object request, Class<T> responseType, Object... uriVariables) {
-            return exchange(url, HttpMethod.POST, new HttpEntity<>(request), responseType, uriVariables);
-        }
-
-        <T> ResponseEntity<T> getForEntity(String url, Class<T> responseType, Object... uriVariables) {
-            return exchange(url, HttpMethod.GET, null, responseType, uriVariables);
-        }
-
-        <T> ResponseEntity<T> exchange(
-                String url,
-                HttpMethod method,
-                HttpEntity<?> requestEntity,
-                Class<T> responseType,
-                Object... uriVariables) {
-            RequestContext requestContext = buildRequestContext(url, requestEntity, uriVariables);
-            return delegate.exchange(
-                    requestContext.url(),
-                    method,
-                    requestContext.entity(),
-                    responseType,
-                    requestContext.uriVariables());
-        }
-
-        private RequestContext buildRequestContext(
-                String url, HttpEntity<?> requestEntity, Object... uriVariables) {
-            HttpHeaders headers = new HttpHeaders();
-            Object requestBody = null;
-
-            if (requestEntity != null) {
-                headers.putAll(requestEntity.getHeaders());
-                requestBody = requestEntity.getBody();
-            }
-
-            Object[] effectiveUriVariables = uriVariables == null ? new Object[0] : uriVariables;
-            String userIdFromCall = null;
-            if (effectiveUriVariables.length > 0 && effectiveUriVariables[0] instanceof String firstVar) {
-                userIdFromCall = firstVar;
-                int placeholderCount = countPathVariables(url);
-                if (effectiveUriVariables.length > placeholderCount) {
-                    effectiveUriVariables = Arrays.copyOfRange(effectiveUriVariables, 1, effectiveUriVariables.length);
-                }
-            }
-
-            String normalizedUrl = normalizeLegacyUrl(url);
-            if (headers.getFirst(HttpHeaders.AUTHORIZATION) == null) {
-                headers.setBearerAuth(
-                        userIdFromCall != null ? userIdFromCall : IntegrationTestConfiguration.TEST_BEARER_TOKEN);
-            }
-
-            HttpEntity<?> authenticatedEntity =
-                    requestBody != null ? new HttpEntity<>(requestBody, headers) : new HttpEntity<>(headers);
-
-            return new RequestContext(normalizedUrl, authenticatedEntity, effectiveUriVariables);
-        }
-
-        private String normalizeLegacyUrl(String url) {
-            return url;
-        }
-
-        private int countPathVariables(String url) {
-            Matcher matcher = Pattern.compile("\\{[^/]+\\}").matcher(url);
-            int count = 0;
-            while (matcher.find()) {
-                count++;
-            }
-            return count;
-        }
-
-        private record RequestContext(String url, HttpEntity<?> entity, Object[] uriVariables) {}
+    private AuthenticatedRestTemplate(RestTemplate delegate) {
+      this.delegate = delegate;
     }
-}
 
+    <T> ResponseEntity<T> postForEntity(
+        String url, Object request, Class<T> responseType, Object... uriVariables) {
+      return exchange(url, HttpMethod.POST, new HttpEntity<>(request), responseType, uriVariables);
+    }
+
+    <T> ResponseEntity<T> getForEntity(String url, Class<T> responseType, Object... uriVariables) {
+      return exchange(url, HttpMethod.GET, null, responseType, uriVariables);
+    }
+
+    <T> ResponseEntity<T> exchange(
+        String url,
+        HttpMethod method,
+        HttpEntity<?> requestEntity,
+        Class<T> responseType,
+        Object... uriVariables) {
+      RequestContext requestContext = buildRequestContext(url, requestEntity, uriVariables);
+      return delegate.exchange(
+          requestContext.url(),
+          method,
+          requestContext.entity(),
+          responseType,
+          requestContext.uriVariables());
+    }
+
+    private RequestContext buildRequestContext(
+        String url, HttpEntity<?> requestEntity, Object... uriVariables) {
+      HttpHeaders headers = new HttpHeaders();
+      Object requestBody = null;
+
+      if (requestEntity != null) {
+        headers.putAll(requestEntity.getHeaders());
+        requestBody = requestEntity.getBody();
+      }
+
+      Object[] effectiveUriVariables = uriVariables == null ? new Object[0] : uriVariables;
+      String userIdFromCall = null;
+      if (effectiveUriVariables.length > 0 && effectiveUriVariables[0] instanceof String firstVar) {
+        userIdFromCall = firstVar;
+        int placeholderCount = countPathVariables(url);
+        if (effectiveUriVariables.length > placeholderCount) {
+          effectiveUriVariables =
+              Arrays.copyOfRange(effectiveUriVariables, 1, effectiveUriVariables.length);
+        }
+      }
+
+      String normalizedUrl = normalizeLegacyUrl(url);
+      if (headers.getFirst(HttpHeaders.AUTHORIZATION) == null) {
+        headers.setBearerAuth(
+            userIdFromCall != null
+                ? userIdFromCall
+                : IntegrationTestConfiguration.TEST_BEARER_TOKEN);
+      }
+
+      HttpEntity<?> authenticatedEntity =
+          requestBody != null ? new HttpEntity<>(requestBody, headers) : new HttpEntity<>(headers);
+
+      return new RequestContext(normalizedUrl, authenticatedEntity, effectiveUriVariables);
+    }
+
+    private String normalizeLegacyUrl(String url) {
+      return url;
+    }
+
+    private int countPathVariables(String url) {
+      Matcher matcher = Pattern.compile("\\{[^/]+\\}").matcher(url);
+      int count = 0;
+      while (matcher.find()) {
+        count++;
+      }
+      return count;
+    }
+
+    private record RequestContext(String url, HttpEntity<?> entity, Object[] uriVariables) {}
+  }
+}

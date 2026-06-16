@@ -3,11 +3,14 @@ package com.uj.enterprise_policy_orchestrator.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.uj.enterprise_policy_orchestrator.category.dto.CategoryOptionDto;
+import com.uj.enterprise_policy_orchestrator.category.service.CategoryService;
 import com.uj.enterprise_policy_orchestrator.exception.NoApplicablePoliciesException;
 import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequest;
 import com.uj.enterprise_policy_orchestrator.expense_request.ExpenseRequestHistory;
@@ -27,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -45,7 +49,16 @@ class ExpenseRequestServiceTest {
   @Mock private ExpenseRequestHistoryRepository expenseRequestHistoryRepository;
   @Mock private PolicyRepository policyRepository;
   @Mock private PolicyService policyService;
+  @Mock private CategoryService categoryService;
   @InjectMocks private ExpenseRequestService expenseRequestService;
+
+  @BeforeEach
+  void setUpCategoryNormalization() {
+    lenient()
+        .when(categoryService.getCategory(any()))
+        .thenAnswer(invocation -> new CategoryOptionDto(invocation.getArgument(0), "Category"));
+    lenient().when(categoryService.getCategoryLabel(any())).thenReturn("Category");
+  }
 
   @Nested
   @DisplayName("Scenario 1: Employee submits a valid expense request")
@@ -61,7 +74,7 @@ class ExpenseRequestServiceTest {
       CreateExpenseRequestDto dto =
           new CreateExpenseRequestDto(
               new BigDecimal("1500.00"),
-              "Business travel",
+              1,
               "Business trip to Krakow – train tickets and hotel",
               LocalDateTime.of(2026, 3, 20, 10, 30, 0));
 
@@ -69,7 +82,6 @@ class ExpenseRequestServiceTest {
           Policy.builder()
               .id(1L)
               .policyId("POL-001")
-              .category("Travel")
               .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
               .expiresAt(null)
               .minPrice(BigDecimal.ZERO)
@@ -80,9 +92,7 @@ class ExpenseRequestServiceTest {
       applicablePolicies.add(policy);
 
       when(policyService.findApplicablePolicies(
-              "Business travel",
-              LocalDateTime.of(2026, 3, 20, 10, 30, 0),
-              new BigDecimal("1500.00")))
+              1, LocalDateTime.of(2026, 3, 20, 10, 30, 0), new BigDecimal("1500.00")))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -102,7 +112,8 @@ class ExpenseRequestServiceTest {
       assertThat(result.id()).isEqualTo(100L);
       assertThat(result.userId()).isEqualTo(userId);
       assertThat(result.amount()).isEqualByComparingTo("1500.00");
-      assertThat(result.category()).isEqualTo("Business travel");
+      assertThat(result.categoryId()).isEqualTo(1);
+      assertThat(result.categoryLabel()).isEqualTo("Category");
       assertThat(result.description())
           .isEqualTo("Business trip to Krakow – train tickets and hotel");
       assertThat(result.expenseDate()).isEqualTo(LocalDateTime.of(2026, 3, 20, 10, 30, 0));
@@ -120,15 +131,13 @@ class ExpenseRequestServiceTest {
       LocalDateTime expenseDate = LocalDateTime.now();
 
       CreateExpenseRequestDto dto =
-          new CreateExpenseRequestDto(
-              new BigDecimal("250.00"), "Office supplies", "Printer toner", expenseDate);
+          new CreateExpenseRequestDto(new BigDecimal("250.00"), 1, "Printer toner", expenseDate);
 
       Policy policy = Policy.builder().id(1L).build();
       Set<Policy> applicablePolicies = new HashSet<>();
       applicablePolicies.add(policy);
 
-      when(policyService.findApplicablePolicies(
-              "Office supplies", expenseDate, new BigDecimal("250.00")))
+      when(policyService.findApplicablePolicies(1, expenseDate, new BigDecimal("250.00")))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -151,7 +160,7 @@ class ExpenseRequestServiceTest {
       ExpenseRequest saved = captor.getValue();
       assertThat(saved.getUserId()).isEqualTo(userId);
       assertThat(saved.getAmount()).isEqualByComparingTo("250.00");
-      assertThat(saved.getCategory()).isEqualTo("Office supplies");
+      assertThat(saved.getCategoryId()).isEqualTo(1);
       assertThat(saved.getDescription()).isEqualTo("Printer toner");
       assertThat(saved.getExpenseDate()).isEqualTo(expenseDate);
     }
@@ -165,7 +174,7 @@ class ExpenseRequestServiceTest {
       CreateExpenseRequestDto dto =
           new CreateExpenseRequestDto(
               new BigDecimal("89.99"),
-              "Training",
+              3,
               "Online Java course",
               LocalDateTime.of(2026, 4, 1, 9, 15, 0));
 
@@ -177,7 +186,7 @@ class ExpenseRequestServiceTest {
       applicablePolicies.add(policy2);
 
       when(policyService.findApplicablePolicies(
-              "Training", LocalDateTime.of(2026, 4, 1, 9, 15, 0), new BigDecimal("89.99")))
+              3, LocalDateTime.of(2026, 4, 1, 9, 15, 0), new BigDecimal("89.99")))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -211,12 +220,12 @@ class ExpenseRequestServiceTest {
       CreateExpenseRequestDto dto =
           new CreateExpenseRequestDto(
               new BigDecimal("100.00"),
-              "Unknown",
+              1,
               "No policy for this",
               LocalDateTime.of(2026, 1, 1, 11, 0, 0));
 
       when(policyService.findApplicablePolicies(
-              "Unknown", LocalDateTime.of(2026, 1, 1, 11, 0, 0), new BigDecimal("100.00")))
+              1, LocalDateTime.of(2026, 1, 1, 11, 0, 0), new BigDecimal("100.00")))
           .thenReturn(new HashSet<>());
 
       // when & then
@@ -234,13 +243,12 @@ class ExpenseRequestServiceTest {
       LocalDateTime expenseDate = LocalDateTime.of(2026, 5, 13, 12, 0, 0);
 
       CreateExpenseRequestDto dto =
-          new CreateExpenseRequestDto(
-              new BigDecimal("100.00"), "Sprzet biurowy", "Office keyboard", expenseDate);
+          new CreateExpenseRequestDto(new BigDecimal("100.00"), 1, "Office keyboard", expenseDate);
 
       Set<Policy> applicablePolicies = new HashSet<>();
       applicablePolicies.add(Policy.builder().id(1L).policyId("POL-1").build());
 
-      when(policyService.findApplicablePolicies("1", expenseDate, new BigDecimal("100.00")))
+      when(policyService.findApplicablePolicies(1, expenseDate, new BigDecimal("100.00")))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -255,7 +263,7 @@ class ExpenseRequestServiceTest {
 
       expenseRequestService.createExpenseRequest(userId, dto);
 
-      verify(policyService).findApplicablePolicies("1", expenseDate, new BigDecimal("100.00"));
+      verify(policyService).findApplicablePolicies(1, expenseDate, new BigDecimal("100.00"));
     }
   }
 
@@ -272,14 +280,13 @@ class ExpenseRequestServiceTest {
       LocalDateTime expenseDate = LocalDateTime.of(2026, 2, 15, 14, 0, 0);
 
       CreateExpenseRequestDto dto =
-          new CreateExpenseRequestDto(expenseAmount, "Travel", "Hotel and flights", expenseDate);
+          new CreateExpenseRequestDto(expenseAmount, 1, "Hotel and flights", expenseDate);
 
       // Mock multiple applicable policies
       Policy policy1 =
           Policy.builder()
               .id(1L)
               .policyId("TRAVEL-001")
-              .category("Travel")
               .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0))
               .expiresAt(LocalDateTime.of(2026, 12, 31, 23, 59))
               .minPrice(new BigDecimal("100"))
@@ -290,7 +297,6 @@ class ExpenseRequestServiceTest {
           Policy.builder()
               .id(2L)
               .policyId("TRAVEL-002")
-              .category("Travel")
               .startsAt(LocalDateTime.of(2025, 1, 1, 0, 0))
               .expiresAt(null)
               .minPrice(BigDecimal.ZERO)
@@ -301,7 +307,7 @@ class ExpenseRequestServiceTest {
       applicablePolicies.add(policy1);
       applicablePolicies.add(policy2);
 
-      when(policyService.findApplicablePolicies("Travel", expenseDate, expenseAmount))
+      when(policyService.findApplicablePolicies(1, expenseDate, expenseAmount))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -337,13 +343,12 @@ class ExpenseRequestServiceTest {
       LocalDateTime expenseDate = LocalDateTime.of(2026, 3, 10, 13, 0, 0);
 
       CreateExpenseRequestDto dto =
-          new CreateExpenseRequestDto(expenseAmount, "Office", "Office equipment", expenseDate);
+          new CreateExpenseRequestDto(expenseAmount, 1, "Office equipment", expenseDate);
 
       Policy policy =
           Policy.builder()
               .id(1L)
               .policyId("OFFICE-001")
-              .category("Travel")
               .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0))
               .expiresAt(null)
               .minPrice(BigDecimal.ZERO)
@@ -353,7 +358,7 @@ class ExpenseRequestServiceTest {
       Set<Policy> applicablePolicies = new HashSet<>();
       applicablePolicies.add(policy);
 
-      when(policyService.findApplicablePolicies("Office", expenseDate, expenseAmount))
+      when(policyService.findApplicablePolicies(1, expenseDate, expenseAmount))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -388,12 +393,12 @@ class ExpenseRequestServiceTest {
       CreateExpenseRequestDto dto =
           new CreateExpenseRequestDto(
               new BigDecimal("10000.00"),
-              "Luxury",
+              1,
               "Expensive item",
               LocalDateTime.of(2026, 1, 1, 11, 0, 0));
 
       when(policyService.findApplicablePolicies(
-              "Luxury", LocalDateTime.of(2026, 1, 1, 11, 0, 0), new BigDecimal("10000.00")))
+              1, LocalDateTime.of(2026, 1, 1, 11, 0, 0), new BigDecimal("10000.00")))
           .thenReturn(new HashSet<>());
 
       // when & then
@@ -409,19 +414,19 @@ class ExpenseRequestServiceTest {
     void shouldPreserveExpenseDetailsWhenAssigningPolicies() {
       // given
       String userId = "user-400";
-      String category = "Meals";
+      Integer categoryId = 4;
       BigDecimal amount = new BigDecimal("85.50");
       LocalDateTime expenseDate = LocalDateTime.of(2026, 2, 28, 16, 30, 0);
       String description = "Team lunch meeting";
 
       CreateExpenseRequestDto dto =
-          new CreateExpenseRequestDto(amount, category, description, expenseDate);
+          new CreateExpenseRequestDto(amount, categoryId, description, expenseDate);
 
       Policy policy = Policy.builder().id(1L).build();
       Set<Policy> applicablePolicies = new HashSet<>();
       applicablePolicies.add(policy);
 
-      when(policyService.findApplicablePolicies(category, expenseDate, amount))
+      when(policyService.findApplicablePolicies(categoryId, expenseDate, amount))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -439,7 +444,8 @@ class ExpenseRequestServiceTest {
 
       // then
       assertThat(result.userId()).isEqualTo(userId);
-      assertThat(result.category()).isEqualTo(category);
+      assertThat(result.categoryId()).isEqualTo(categoryId);
+      assertThat(result.categoryLabel()).isEqualTo("Category");
       assertThat(result.amount()).isEqualByComparingTo(amount);
       assertThat(result.expenseDate()).isEqualTo(expenseDate);
       assertThat(result.description()).isEqualTo(description);
@@ -452,15 +458,14 @@ class ExpenseRequestServiceTest {
       String userId = "user-500";
       LocalDateTime expenseDate = LocalDateTime.of(2026, 5, 13, 0, 0, 0);
       CreateExpenseRequestDto dto =
-          new CreateExpenseRequestDto(new BigDecimal("100.00"), "Travel", "Date-only", expenseDate);
+          new CreateExpenseRequestDto(new BigDecimal("100.00"), 1, "Date-only", expenseDate);
 
       Policy policy = Policy.builder().id(1L).policyId("POL-001").build();
       Set<Policy> applicablePolicies = new HashSet<>();
       applicablePolicies.add(policy);
 
       LocalDateTime expectedMatchingDate = LocalDateTime.of(2026, 5, 13, 23, 59, 59, 999999999);
-      when(policyService.findApplicablePolicies(
-              "Travel", expectedMatchingDate, new BigDecimal("100.00")))
+      when(policyService.findApplicablePolicies(1, expectedMatchingDate, new BigDecimal("100.00")))
           .thenReturn(applicablePolicies);
 
       when(expenseRequestRepository.save(any(ExpenseRequest.class)))
@@ -478,7 +483,7 @@ class ExpenseRequestServiceTest {
 
       // then
       verify(policyService)
-          .findApplicablePolicies("Travel", expectedMatchingDate, new BigDecimal("100.00"));
+          .findApplicablePolicies(1, expectedMatchingDate, new BigDecimal("100.00"));
     }
   }
 
@@ -497,7 +502,6 @@ class ExpenseRequestServiceTest {
               .id(101L)
               .userId("user-3")
               .amount(new BigDecimal("500.00"))
-              .category("Travel")
               .description("Flight to conference")
               .expenseDate(LocalDateTime.of(2026, 1, 15, 9, 15, 0))
               .submittedAt(LocalDateTime.of(2026, 1, 16, 10, 0, 0))
@@ -508,7 +512,6 @@ class ExpenseRequestServiceTest {
               .id(102L)
               .userId("user-3")
               .amount(new BigDecimal("150.00"))
-              .category("Meals")
               .description("Team lunch")
               .expenseDate(LocalDateTime.of(2026, 1, 20, 9, 15, 0))
               .submittedAt(LocalDateTime.of(2026, 1, 21, 14, 30, 0))
@@ -519,7 +522,6 @@ class ExpenseRequestServiceTest {
               .id(103L)
               .userId("user-3")
               .amount(new BigDecimal("75.50"))
-              .category("Office supplies")
               .description("Notebooks and pens")
               .expenseDate(LocalDateTime.of(2026, 2, 1, 9, 15, 0))
               .submittedAt(LocalDateTime.of(2026, 2, 2, 9, 15, 0))
@@ -595,7 +597,6 @@ class ExpenseRequestServiceTest {
               .id(expenseRequestId)
               .userId(userId)
               .amount(new BigDecimal("1500.00"))
-              .category("Business travel")
               .description("Business trip to Krakow")
               .expenseDate(LocalDateTime.of(2026, 3, 20, 0, 0, 0))
               .submittedAt(LocalDateTime.now())
@@ -635,7 +636,6 @@ class ExpenseRequestServiceTest {
               .id(expenseRequestId)
               .userId(userId)
               .amount(new BigDecimal("250.00"))
-              .category("Office supplies")
               .description("Printer toner")
               .expenseDate(LocalDateTime.of(2026, 5, 10, 0, 0, 0))
               .submittedAt(LocalDateTime.now())
@@ -698,7 +698,6 @@ class ExpenseRequestServiceTest {
               .id(expenseRequestId)
               .userId(ownerUserId)
               .amount(new BigDecimal("1500.00"))
-              .category("Business travel")
               .description("Business trip")
               .expenseDate(LocalDateTime.of(2026, 3, 20, 0, 0, 0))
               .submittedAt(LocalDateTime.now())
@@ -730,7 +729,6 @@ class ExpenseRequestServiceTest {
               .id(expenseRequestId)
               .userId(userId)
               .amount(new BigDecimal("1500.00"))
-              .category("Business travel")
               .description("Business trip")
               .expenseDate(LocalDateTime.of(2026, 3, 20, 0, 0, 0))
               .submittedAt(LocalDateTime.now())
@@ -761,7 +759,6 @@ class ExpenseRequestServiceTest {
               .id(expenseRequestId)
               .userId(userId)
               .amount(new BigDecimal("1500.00"))
-              .category("Business travel")
               .description("Business trip")
               .expenseDate(LocalDateTime.of(2026, 3, 20, 0, 0, 0))
               .submittedAt(LocalDateTime.now())
@@ -820,7 +817,7 @@ class ExpenseRequestServiceTest {
       when(expenseRequestHistoryRepository.findByRequestId(
               requestId, Sort.by(Sort.Direction.DESC, "changedAt")))
           .thenReturn(List.of(history2, history1));
-        when(expenseRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+      when(expenseRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
 
       // when
       List<ExpenseRequestHistoryDto> result =
@@ -892,7 +889,7 @@ class ExpenseRequestServiceTest {
 
       // when
       List<ExpenseRequestHistoryDto> result =
-        expenseRequestService.getExpenseRequestStatusHistory(userId, requestId);
+          expenseRequestService.getExpenseRequestStatusHistory(userId, requestId);
 
       // then
       assertThat(result).isEmpty();

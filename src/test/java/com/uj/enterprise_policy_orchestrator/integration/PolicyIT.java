@@ -62,7 +62,6 @@ class PolicyIT extends AbstractIntegrationTest {
               expiresAt,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "Travel",
               2);
       var beforeCount = policyRepository.count();
       ResponseEntity<PolicyDto> response =
@@ -93,7 +92,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("500"),
               new BigDecimal("10000"),
-              "Hardware",
               3);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -120,7 +118,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               null,
               null,
-              "Custom",
               1);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -145,7 +142,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("50"),
               new BigDecimal("5000"),
-              "Sprzet biurowy",
               1);
 
       ResponseEntity<PolicyDto> response =
@@ -154,7 +150,8 @@ class PolicyIT extends AbstractIntegrationTest {
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
-      assertEquals("1", response.getBody().category());
+      assertEquals(1, response.getBody().categoryId());
+      assertEquals("Sprzet biurowy", response.getBody().categoryLabel());
     }
 
     @Test
@@ -175,7 +172,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("1000"),
-              "Travel",
               1);
       ResponseEntity<PolicyDto> v1Response =
           restTemplate.postForEntity(
@@ -194,7 +190,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("200"),
               new BigDecimal("2000"),
-              "Travel",
               2);
       ResponseEntity<PolicyDto> v2Response =
           restTemplate.postForEntity(
@@ -205,73 +200,70 @@ class PolicyIT extends AbstractIntegrationTest {
       assertEquals(policyId, v2Response.getBody().policyId());
     }
 
-      @Test
-      @DisplayName("should increment version even when previous policy versions are inactive")
-      void shouldIncrementVersionEvenWhenPreviousVersionsAreInactive() {
-        String userId = "user-inactive-version";
-        String policyId = "POL-INACTIVE-CHAIN-001";
+    @Test
+    @DisplayName("should increment version even when previous policy versions are inactive")
+    void shouldIncrementVersionEvenWhenPreviousVersionsAreInactive() {
+      String userId = "user-inactive-version";
+      String policyId = "POL-INACTIVE-CHAIN-001";
 
-        CreatePolicyDto v1Request =
+      CreatePolicyDto v1Request =
           new CreatePolicyDto(
-            Optional.of(policyId),
-            1,
-            "Policy V1",
-            "Inactive version 1",
-            LocalDateTime.of(2020, 1, 1, 0, 0, 0),
-            LocalDateTime.of(2020, 12, 31, 23, 59, 59),
-            new BigDecimal("100"),
-            new BigDecimal("1000"),
-            "Travel",
-            1);
+              Optional.of(policyId),
+              1,
+              "Policy V1",
+              "Inactive version 1",
+              LocalDateTime.of(2020, 1, 1, 0, 0, 0),
+              LocalDateTime.of(2020, 12, 31, 23, 59, 59),
+              new BigDecimal("100"),
+              new BigDecimal("1000"),
+              1);
 
-        ResponseEntity<PolicyDto> v1Response =
+      ResponseEntity<PolicyDto> v1Response =
           restTemplate.postForEntity(
-            baseUrl() + "/api/policies", v1Request, PolicyDto.class, userId);
-        assertEquals(HttpStatus.CREATED, v1Response.getStatusCode());
-        assertNotNull(v1Response.getBody());
-        assertEquals(1, v1Response.getBody().version());
+              baseUrl() + "/api/policies", v1Request, PolicyDto.class, userId);
+      assertEquals(HttpStatus.CREATED, v1Response.getStatusCode());
+      assertNotNull(v1Response.getBody());
+      assertEquals(1, v1Response.getBody().version());
 
-        CreatePolicyDto v2Request =
+      CreatePolicyDto v2Request =
           new CreatePolicyDto(
-            Optional.of(policyId),
-            1,
-            "Policy V2",
-            "Inactive version 2",
-            LocalDateTime.of(2021, 1, 1, 0, 0, 0),
-            LocalDateTime.of(2021, 12, 31, 23, 59, 59),
-            new BigDecimal("150"),
-            new BigDecimal("1500"),
-            "Travel",
-            1);
+              Optional.of(policyId),
+              1,
+              "Policy V2",
+              "Inactive version 2",
+              LocalDateTime.of(2021, 1, 1, 0, 0, 0),
+              LocalDateTime.of(2021, 12, 31, 23, 59, 59),
+              new BigDecimal("150"),
+              new BigDecimal("1500"),
+              1);
 
-        ResponseEntity<PolicyDto> v2Response =
+      ResponseEntity<PolicyDto> v2Response =
           restTemplate.postForEntity(
-            baseUrl() + "/api/policies", v2Request, PolicyDto.class, userId);
-        assertEquals(HttpStatus.CREATED, v2Response.getStatusCode());
-        assertNotNull(v2Response.getBody());
-        assertEquals(2, v2Response.getBody().version());
+              baseUrl() + "/api/policies", v2Request, PolicyDto.class, userId);
+      assertEquals(HttpStatus.CREATED, v2Response.getStatusCode());
+      assertNotNull(v2Response.getBody());
+      assertEquals(2, v2Response.getBody().version());
 
-        CreatePolicyDto v3Request =
+      CreatePolicyDto v3Request =
           new CreatePolicyDto(
-            Optional.of(policyId),
-            1,
-            "Policy V3",
-            "Current update after inactive versions",
-            LocalDateTime.now().plusDays(1),
-            null,
-            new BigDecimal("200"),
-            new BigDecimal("2000"),
-            "Travel",
-            2);
+              Optional.of(policyId),
+              1,
+              "Policy V3",
+              "Current update after inactive versions",
+              LocalDateTime.now().plusDays(1),
+              null,
+              new BigDecimal("200"),
+              new BigDecimal("2000"),
+              2);
 
-        ResponseEntity<PolicyDto> v3Response =
+      ResponseEntity<PolicyDto> v3Response =
           restTemplate.postForEntity(
-            baseUrl() + "/api/policies", v3Request, PolicyDto.class, userId);
-        assertEquals(HttpStatus.CREATED, v3Response.getStatusCode());
-        assertNotNull(v3Response.getBody());
-        assertEquals(3, v3Response.getBody().version());
-        assertEquals(policyId, v3Response.getBody().policyId());
-      }
+              baseUrl() + "/api/policies", v3Request, PolicyDto.class, userId);
+      assertEquals(HttpStatus.CREATED, v3Response.getStatusCode());
+      assertNotNull(v3Response.getBody());
+      assertEquals(3, v3Response.getBody().version());
+      assertEquals(policyId, v3Response.getBody().policyId());
+    }
   }
 
   @Nested
@@ -293,10 +285,8 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("10"),
               new BigDecimal("100"),
-              "Travel",
               1);
-      restTemplate.postForEntity(
-          baseUrl() + "/api/policies", olderPolicy, PolicyDto.class, userId);
+      restTemplate.postForEntity(baseUrl() + "/api/policies", olderPolicy, PolicyDto.class, userId);
 
       String policyId = "POL-LATEST-001";
       CreatePolicyDto v1Request =
@@ -309,7 +299,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("1000"),
-              "Travel",
               1);
       ResponseEntity<PolicyDto> v1Response =
           restTemplate.postForEntity(
@@ -327,7 +316,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("200"),
               new BigDecimal("2000"),
-              "Travel",
               1);
       ResponseEntity<PolicyDto> v2Response =
           restTemplate.postForEntity(
@@ -336,8 +324,7 @@ class PolicyIT extends AbstractIntegrationTest {
       assertEquals(2, Objects.requireNonNull(v2Response.getBody()).version());
 
       ResponseEntity<PolicyDto[]> response =
-          restTemplate.getForEntity(
-              baseUrl() + "/api/policies", PolicyDto[].class, userId);
+          restTemplate.getForEntity(baseUrl() + "/api/policies", PolicyDto[].class, userId);
 
       assertEquals(HttpStatus.OK, response.getStatusCode());
       PolicyDto[] policies = response.getBody();
@@ -367,7 +354,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("1000"),
-              "Travel",
               1);
 
       ResponseEntity<PolicyDto> createResponse =
@@ -414,17 +400,13 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "Travel",
               1);
       restTemplate.postForEntity(
           baseUrl() + "/api/policies", createRequest, PolicyDto.class, userId);
 
       ResponseEntity<PolicyDto> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/policies/{policyId}",
-              PolicyDto.class,
-              userId,
-              policyId);
+              baseUrl() + "/api/policies/{policyId}", PolicyDto.class, userId, policyId);
       assertEquals(HttpStatus.OK, response.getStatusCode());
       assertNotNull(response.getBody());
       assertEquals(policyId, response.getBody().policyId());
@@ -452,10 +434,8 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("1000"),
-              "Travel",
               1);
-      restTemplate.postForEntity(
-          baseUrl() + "/api/policies", v1Request, PolicyDto.class, userId);
+      restTemplate.postForEntity(baseUrl() + "/api/policies", v1Request, PolicyDto.class, userId);
 
       CreatePolicyDto v2Request =
           new CreatePolicyDto(
@@ -467,10 +447,8 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("200"),
               new BigDecimal("2000"),
-              "Travel",
               2);
-      restTemplate.postForEntity(
-          baseUrl() + "/api/policies", v2Request, PolicyDto.class, userId);
+      restTemplate.postForEntity(baseUrl() + "/api/policies", v2Request, PolicyDto.class, userId);
 
       CreatePolicyDto v3Request =
           new CreatePolicyDto(
@@ -482,17 +460,12 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("300"),
               new BigDecimal("3000"),
-              "Travel",
               3);
-      restTemplate.postForEntity(
-          baseUrl() + "/api/policies", v3Request, PolicyDto.class, userId);
+      restTemplate.postForEntity(baseUrl() + "/api/policies", v3Request, PolicyDto.class, userId);
 
       ResponseEntity<PolicyDto> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/policies/{policyId}",
-              PolicyDto.class,
-              userId,
-              policyId);
+              baseUrl() + "/api/policies/{policyId}", PolicyDto.class, userId, policyId);
       assertEquals(HttpStatus.OK, response.getStatusCode());
       assertNotNull(response.getBody());
       assertEquals(3, response.getBody().version());
@@ -531,7 +504,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("1000"),
-              "Travel",
               1);
 
       ResponseEntity<PolicyDto> createResponse =
@@ -542,10 +514,7 @@ class PolicyIT extends AbstractIntegrationTest {
 
       ResponseEntity<PolicyDto> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/policies/{policyId}",
-              PolicyDto.class,
-              userId,
-              policyDbId);
+              baseUrl() + "/api/policies/{policyId}", PolicyDto.class, userId, policyDbId);
 
       assertEquals(HttpStatus.OK, response.getStatusCode());
       assertNotNull(response.getBody());
@@ -584,18 +553,13 @@ class PolicyIT extends AbstractIntegrationTest {
                 null,
                 new BigDecimal(String.valueOf(100 * i)),
                 new BigDecimal(String.valueOf(1000 * i)),
-                "Travel",
                 i);
-        restTemplate.postForEntity(
-            baseUrl() + "/api/policies", request, PolicyDto.class, userId);
+        restTemplate.postForEntity(baseUrl() + "/api/policies", request, PolicyDto.class, userId);
       }
 
       ResponseEntity<PolicyDto[]> response =
           restTemplate.getForEntity(
-              baseUrl() + "/api/policies/{policyId}/history",
-              PolicyDto[].class,
-              userId,
-              policyId);
+              baseUrl() + "/api/policies/{policyId}/history", PolicyDto[].class, userId, policyId);
       assertEquals(HttpStatus.OK, response.getStatusCode());
       PolicyDto[] history = response.getBody();
       assertNotNull(history);
@@ -640,7 +604,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("1000"),
-              "Travel",
               1);
 
       ResponseEntity<PolicyDto> createResponse =
@@ -684,7 +647,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "Travel",
               1);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -710,7 +672,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               null,
               null,
-              "Office",
               1);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -737,7 +698,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "Travel",
               1);
       ResponseEntity<PolicyDto> response =
           restTemplate.postForEntity(
@@ -750,10 +710,7 @@ class PolicyIT extends AbstractIntegrationTest {
 
       ResponseEntity<PolicyDto> retrievedResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/policies/{policyId}",
-              PolicyDto.class,
-              userId,
-              policyId);
+              baseUrl() + "/api/policies/{policyId}", PolicyDto.class, userId, policyId);
 
       assertNotNull(retrievedResponse.getBody());
       assertEquals(originalPolicyId, retrievedResponse.getBody().policyId());
@@ -779,10 +736,8 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("100"),
               new BigDecimal("5000"),
-              "Travel",
               1);
-      restTemplate.postForEntity(
-          baseUrl() + "/api/policies", v1Request, PolicyDto.class, userId);
+      restTemplate.postForEntity(baseUrl() + "/api/policies", v1Request, PolicyDto.class, userId);
 
       CreatePolicyDto v2Request =
           new CreatePolicyDto(
@@ -794,17 +749,12 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               new BigDecimal("200"),
               new BigDecimal("5000"),
-              "Travel",
               1);
-      restTemplate.postForEntity(
-          baseUrl() + "/api/policies", v2Request, PolicyDto.class, userId);
+      restTemplate.postForEntity(baseUrl() + "/api/policies", v2Request, PolicyDto.class, userId);
 
       ResponseEntity<PolicyDto[]> historyResponse =
           restTemplate.getForEntity(
-              baseUrl() + "/api/policies/{policyId}/history",
-              PolicyDto[].class,
-              userId,
-              policyId);
+              baseUrl() + "/api/policies/{policyId}/history", PolicyDto[].class, userId, policyId);
 
       PolicyDto[] history = historyResponse.getBody();
       assertNotNull(history);
@@ -832,7 +782,6 @@ class PolicyIT extends AbstractIntegrationTest {
               null,
               largeMin,
               largeMax,
-              "Travel",
               1);
 
       ResponseEntity<PolicyDto> response =
@@ -863,17 +812,15 @@ class PolicyIT extends AbstractIntegrationTest {
         CreatePolicyDto request =
             new CreatePolicyDto(
                 Optional.of("POLICY-COUNT-" + i),
-                i + 1,
+                (i % 4) + 1,
                 "Policy " + i,
                 "Description " + i,
                 LocalDateTime.now(),
                 null,
                 new BigDecimal("100"),
                 new BigDecimal("5000"),
-                category,
                 1);
-        restTemplate.postForEntity(
-            baseUrl() + "/api/policies", request, PolicyDto.class, userId);
+        restTemplate.postForEntity(baseUrl() + "/api/policies", request, PolicyDto.class, userId);
       }
 
       long afterCreation = policyRepository.count();
@@ -936,13 +883,16 @@ class PolicyIT extends AbstractIntegrationTest {
       String userIdFromCall = null;
       if (effectiveUriVariables.length > 0 && effectiveUriVariables[0] instanceof String firstVar) {
         userIdFromCall = firstVar;
-        effectiveUriVariables = Arrays.copyOfRange(effectiveUriVariables, 1, effectiveUriVariables.length);
+        effectiveUriVariables =
+            Arrays.copyOfRange(effectiveUriVariables, 1, effectiveUriVariables.length);
       }
 
       String normalizedUrl = normalizeLegacyUrl(url);
       if (headers.getFirst(HttpHeaders.AUTHORIZATION) == null) {
         headers.setBearerAuth(
-            userIdFromCall != null ? userIdFromCall : IntegrationTestConfiguration.TEST_BEARER_TOKEN);
+            userIdFromCall != null
+                ? userIdFromCall
+                : IntegrationTestConfiguration.TEST_BEARER_TOKEN);
       }
 
       HttpEntity<?> authenticatedEntity =
@@ -958,4 +908,3 @@ class PolicyIT extends AbstractIntegrationTest {
     private record RequestContext(String url, HttpEntity<?> entity, Object[] uriVariables) {}
   }
 }
-

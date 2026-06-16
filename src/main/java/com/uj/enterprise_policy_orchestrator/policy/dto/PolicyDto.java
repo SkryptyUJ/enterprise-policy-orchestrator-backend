@@ -18,7 +18,7 @@ public record PolicyDto(
     LocalDateTime expiresAt,
     BigDecimal minPrice,
     BigDecimal maxPrice,
-    String category,
+    String categoryLabel,
     Integer authorizedRole) {
 
   @JsonProperty("active")

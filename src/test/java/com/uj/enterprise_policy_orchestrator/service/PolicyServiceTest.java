@@ -3,10 +3,13 @@ package com.uj.enterprise_policy_orchestrator.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.uj.enterprise_policy_orchestrator.category.dto.CategoryOptionDto;
+import com.uj.enterprise_policy_orchestrator.category.service.CategoryService;
 import com.uj.enterprise_policy_orchestrator.policy.Policy;
 import com.uj.enterprise_policy_orchestrator.policy.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
@@ -16,6 +19,7 @@ import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -30,7 +34,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class PolicyServiceTest {
 
   @Mock private PolicyRepository policyRepository;
+  @Mock private CategoryService categoryService;
   @InjectMocks private PolicyService policyService;
+
+  @BeforeEach
+  void setUpCategoryNormalization() {
+    lenient()
+        .when(categoryService.getCategory(any()))
+        .thenAnswer(invocation -> new CategoryOptionDto(invocation.getArgument(0), "Category"));
+    lenient().when(categoryService.getCategoryLabel(any())).thenReturn("Category");
+  }
 
   @Nested
   @DisplayName("Scenario 1: User creates a valid policy")
@@ -54,7 +67,6 @@ class PolicyServiceTest {
               expiresAt,
               new java.math.BigDecimal("100"),
               new java.math.BigDecimal("5000"),
-              "Travel",
               2);
 
       // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
@@ -92,7 +104,6 @@ class PolicyServiceTest {
               null,
               new java.math.BigDecimal("500"),
               new java.math.BigDecimal("10000"),
-              "Travel",
               3);
 
       // @TODO: Restore when user check is re-enabled in PolicyService.createPolicy()
@@ -114,7 +125,7 @@ class PolicyServiceTest {
       assertThat(saved.getAuthorUserId()).isEqualTo(userId);
       assertThat(saved.getPolicyId()).isEqualTo("200");
       assertThat(saved.getName()).isEqualTo("Hardware Policy");
-      assertThat(saved.getCategory()).isEqualTo("Travel");
+      assertThat(saved.getCategoryId()).isEqualTo(2);
     }
 
     @Test
@@ -132,7 +143,6 @@ class PolicyServiceTest {
               null,
               new java.math.BigDecimal("100"),
               new java.math.BigDecimal("2000"),
-              "Sprzet biurowy",
               1);
 
       when(policyRepository.save(any(Policy.class)))
@@ -147,7 +157,7 @@ class PolicyServiceTest {
 
       ArgumentCaptor<Policy> captor = ArgumentCaptor.forClass(Policy.class);
       verify(policyRepository, times(1)).save(captor.capture());
-      assertThat(captor.getValue().getCategory()).isEqualTo("1");
+      assertThat(captor.getValue().getCategoryId()).isEqualTo(1);
     }
   }
 
@@ -174,7 +184,6 @@ class PolicyServiceTest {
               .expiresAt(now.plusYears(1))
               .minPrice(new java.math.BigDecimal("100"))
               .maxPrice(new java.math.BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
 
@@ -218,7 +227,6 @@ class PolicyServiceTest {
               .expiresAt(now.plusYears(1))
               .minPrice(new java.math.BigDecimal("100"))
               .maxPrice(new java.math.BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
 
@@ -252,7 +260,6 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(new java.math.BigDecimal("100"))
               .maxPrice(new java.math.BigDecimal("1000"))
-              .category("Travel")
               .authorizedRole(2)
               .updatedAt(now)
               .build();
@@ -302,7 +309,6 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(new java.math.BigDecimal("10"))
               .maxPrice(new java.math.BigDecimal("100"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
 
@@ -321,7 +327,6 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(new java.math.BigDecimal("10"))
               .maxPrice(new java.math.BigDecimal("200"))
-              .category("Travel")
               .authorizedRole(1)
               .build();
 
@@ -340,7 +345,6 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(new java.math.BigDecimal("5"))
               .maxPrice(new java.math.BigDecimal("50"))
-              .category("Office")
               .authorizedRole(2)
               .build();
 
@@ -363,7 +367,7 @@ class PolicyServiceTest {
     @DisplayName("should find policies matching category, date, and amount range")
     void shouldFindPoliciesMatchingCategoryDateAndAmount() {
       // given
-      String category = "Travel";
+      Integer categoryId = 1;
       java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 3, 15, 22, 34, 22);
       java.math.BigDecimal amount = new java.math.BigDecimal("2500.00");
       LocalDateTime now = LocalDateTime.now();
@@ -381,7 +385,6 @@ class PolicyServiceTest {
               .expiresAt(now.plusDays(365))
               .minPrice(new java.math.BigDecimal("100"))
               .maxPrice(new java.math.BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now)
               .build();
@@ -399,17 +402,16 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(new java.math.BigDecimal("500"))
               .maxPrice(new java.math.BigDecimal("10000"))
-              .category("Travel")
               .authorizedRole(2)
               .updatedAt(now.minusDays(10))
               .build();
 
-      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+      when(policyRepository.findByCategoryIdAndDateAndAmount(categoryId, expenseDate, amount))
           .thenReturn(List.of(policy1, policy2));
 
       // when
       java.util.Set<Policy> result =
-          policyService.findApplicablePolicies(category, expenseDate, amount);
+          policyService.findApplicablePolicies(categoryId, expenseDate, amount);
 
       // then
       assertThat(result).hasSize(2);
@@ -420,16 +422,16 @@ class PolicyServiceTest {
     @DisplayName("should return empty set when no policies match")
     void shouldReturnEmptySetWhenNoPoliciesMatch() {
       // given
-      String category = "NonExistent";
+      Integer categoryId = 1;
       java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 3, 15, 0, 45, 56);
       java.math.BigDecimal amount = new java.math.BigDecimal("1000.00");
 
-      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+      when(policyRepository.findByCategoryIdAndDateAndAmount(categoryId, expenseDate, amount))
           .thenReturn(List.of());
 
       // when
       java.util.Set<Policy> result =
-          policyService.findApplicablePolicies(category, expenseDate, amount);
+          policyService.findApplicablePolicies(categoryId, expenseDate, amount);
 
       // then
       assertThat(result).isEmpty();
@@ -439,7 +441,7 @@ class PolicyServiceTest {
     @DisplayName("should handle single applicable policy")
     void shouldHandleSingleApplicablePolicy() {
       // given
-      String category = "Office";
+      Integer categoryId = 2;
       java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 4, 1, 0, 0, 0);
       java.math.BigDecimal amount = new java.math.BigDecimal("150.00");
       LocalDateTime now = LocalDateTime.now();
@@ -457,17 +459,16 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(java.math.BigDecimal.ZERO)
               .maxPrice(new java.math.BigDecimal("500"))
-              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now)
               .build();
 
-      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+      when(policyRepository.findByCategoryIdAndDateAndAmount(categoryId, expenseDate, amount))
           .thenReturn(List.of(policy));
 
       // when
       java.util.Set<Policy> result =
-          policyService.findApplicablePolicies(category, expenseDate, amount);
+          policyService.findApplicablePolicies(categoryId, expenseDate, amount);
 
       // then
       assertThat(result).hasSize(1);
@@ -478,7 +479,7 @@ class PolicyServiceTest {
     @DisplayName("should select latest version when multiple versions exist for same policyId")
     void shouldSelectLatestVersionWhenMultipleVersionsExist() {
       // given
-      String category = "Training";
+      Integer categoryId = 3;
       java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 5, 1, 0, 34, 18);
       java.math.BigDecimal amount = new java.math.BigDecimal("500.00");
       LocalDateTime now = LocalDateTime.now();
@@ -497,7 +498,6 @@ class PolicyServiceTest {
               .expiresAt(now.plusDays(355))
               .minPrice(new java.math.BigDecimal("50"))
               .maxPrice(new java.math.BigDecimal("1000"))
-              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now.minusDays(10))
               .build();
@@ -516,17 +516,16 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(new java.math.BigDecimal("100"))
               .maxPrice(new java.math.BigDecimal("1500"))
-              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now) // More recent
               .build();
 
-      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+      when(policyRepository.findByCategoryIdAndDateAndAmount(categoryId, expenseDate, amount))
           .thenReturn(List.of(trainingV1, trainingV2));
 
       // when
       java.util.Set<Policy> result =
-          policyService.findApplicablePolicies(category, expenseDate, amount);
+          policyService.findApplicablePolicies(categoryId, expenseDate, amount);
 
       // then — only the latest version should be included
       assertThat(result).hasSize(1);
@@ -538,7 +537,7 @@ class PolicyServiceTest {
     @DisplayName("should handle mixed versions from different policies")
     void shouldHandleMixedVersionsFromDifferentPolicies() {
       // given
-      String category = "Meals";
+      Integer categoryId = 4;
       java.time.LocalDateTime expenseDate = java.time.LocalDateTime.of(2026, 6, 1, 22, 33, 44);
       java.math.BigDecimal amount = new java.math.BigDecimal("100.00");
       LocalDateTime now = LocalDateTime.now();
@@ -557,7 +556,6 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(java.math.BigDecimal.ZERO)
               .maxPrice(new java.math.BigDecimal("200"))
-              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now)
               .build();
@@ -576,17 +574,16 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(java.math.BigDecimal.ZERO)
               .maxPrice(new java.math.BigDecimal("150"))
-              .category("Travel")
               .authorizedRole(1)
               .updatedAt(now.minusDays(1))
               .build();
 
-      when(policyRepository.findByCategoryAndDateAndAmount(category, expenseDate, amount))
+      when(policyRepository.findByCategoryIdAndDateAndAmount(categoryId, expenseDate, amount))
           .thenReturn(List.of(mealsPolicy1, mealsPolicy2));
 
       // when
       java.util.Set<Policy> result =
-          policyService.findApplicablePolicies(category, expenseDate, amount);
+          policyService.findApplicablePolicies(categoryId, expenseDate, amount);
 
       // then
       assertThat(result).hasSize(2);
@@ -618,7 +615,6 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(new java.math.BigDecimal("100"))
               .maxPrice(new java.math.BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
 
@@ -636,7 +632,6 @@ class PolicyServiceTest {
               .expiresAt(now.plusDays(1))
               .minPrice(new java.math.BigDecimal("100"))
               .maxPrice(new java.math.BigDecimal("5000"))
-              .category("Travel")
               .authorizedRole(2)
               .build();
 
@@ -686,7 +681,6 @@ class PolicyServiceTest {
               .expiresAt(null)
               .minPrice(new java.math.BigDecimal("100"))
               .maxPrice(new java.math.BigDecimal("5000"))
-              .category("1")
               .authorizedRole(2)
               .build();
 
@@ -737,7 +731,6 @@ class PolicyServiceTest {
               .createdAt(now)
               .startsAt(now.minusDays(10))
               .expiresAt(null)
-              .category("1")
               .authorizedRole(2)
               .build();
       Policy expiredPolicy =
@@ -752,7 +745,6 @@ class PolicyServiceTest {
               .createdAt(now.minusYears(2))
               .startsAt(now.minusYears(2))
               .expiresAt(now.minusDays(1))
-              .category("1")
               .authorizedRole(2)
               .build();
 
