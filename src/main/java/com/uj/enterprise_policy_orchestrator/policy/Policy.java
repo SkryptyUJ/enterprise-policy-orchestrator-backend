@@ -56,9 +56,6 @@ public class Policy {
   @Column(updatable = false)
   private BigDecimal maxPrice;
 
-  @Column(nullable = false, length = 100)
-  private String category;
-
   @Column(updatable = false)
   private Integer authorizedRole; /* @todo enum and strict definitions */
 

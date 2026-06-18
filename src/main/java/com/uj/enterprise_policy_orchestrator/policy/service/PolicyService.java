@@ -1,6 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.policy.service;
 
-import com.uj.enterprise_policy_orchestrator.category.enums.ExpenseCategory;
+import com.uj.enterprise_policy_orchestrator.category.service.CategoryService;
 import com.uj.enterprise_policy_orchestrator.policy.Policy;
 import com.uj.enterprise_policy_orchestrator.policy.dto.CreatePolicyDto;
 import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
@@ -27,11 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class PolicyService {
 
   private final PolicyRepository policyRepository;
+  private final CategoryService categoryService;
 
   @Transactional
   public PolicyDto createPolicy(String authorUserId, CreatePolicyDto dto) {
     String policyId = dto.policyId().orElse(UUID.randomUUID().toString());
-    String normalizedCategory = ExpenseCategory.normalize(dto.category());
+    categoryService.getCategory(dto.categoryId());
 
     // Compute next version for any existing history of this policy id.
     int nextVersion = 1;
@@ -40,10 +41,10 @@ public class PolicyService {
     if (!existingPolicies.isEmpty()) {
       nextVersion =
           existingPolicies.stream()
-              .map(Policy::getVersion)
-              .filter(version -> version != null)
-              .max(Integer::compareTo)
-              .orElse(0)
+                  .map(Policy::getVersion)
+                  .filter(version -> version != null)
+                  .max(Integer::compareTo)
+                  .orElse(0)
               + 1;
 
       LocalDateTime now = LocalDateTime.now();
@@ -69,7 +70,6 @@ public class PolicyService {
             .expiresAt(dto.expiresAt())
             .minPrice(dto.minPrice())
             .maxPrice(dto.maxPrice())
-            .category(normalizedCategory)
             .authorizedRole(dto.authorizedRole())
             .version(nextVersion)
             .build();
@@ -128,10 +128,10 @@ public class PolicyService {
   }
 
   public Set<Policy> findApplicablePolicies(
-      String category, LocalDateTime expenseDate, BigDecimal amount) {
-    String normalizedCategory = ExpenseCategory.normalize(category);
+      Integer categoryId, LocalDateTime expenseDate, BigDecimal amount) {
+    categoryService.getCategory(categoryId);
     List<Policy> applicablePolicies =
-        policyRepository.findByCategoryAndDateAndAmount(normalizedCategory, expenseDate, amount);
+        policyRepository.findByCategoryIdAndDateAndAmount(categoryId, expenseDate, amount);
 
     Comparator<Policy> latestVersionComparator =
         Comparator.comparing(Policy::getVersion).thenComparing(Policy::getUpdatedAt);
@@ -162,7 +162,7 @@ public class PolicyService {
         entity.getExpiresAt(),
         entity.getMinPrice(),
         entity.getMaxPrice(),
-        entity.getCategory(),
+        categoryService.getCategoryLabel(entity.getCategoryId()),
         entity.getAuthorizedRole());
   }
 

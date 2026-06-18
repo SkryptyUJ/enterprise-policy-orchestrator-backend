@@ -31,8 +31,8 @@ public class ExpenseRequest {
   @Column(nullable = false, precision = 19, scale = 2)
   private BigDecimal amount;
 
-  @Column(nullable = false, length = 100)
-  private String category;
+  @Column(nullable = false)
+  private Integer categoryId;
 
   @Column(columnDefinition = "TEXT")
   private String description;

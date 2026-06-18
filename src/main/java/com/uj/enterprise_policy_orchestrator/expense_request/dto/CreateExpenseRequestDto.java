@@ -8,15 +8,15 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 
 public record CreateExpenseRequestDto(
-    BigDecimal amount, String category, String description, LocalDateTime expenseDate) {
+    BigDecimal amount, Integer categoryId, String description, LocalDateTime expenseDate) {
 
   @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
   public CreateExpenseRequestDto(
       @JsonProperty("amount") BigDecimal amount,
-      @JsonProperty("category") String category,
+      @JsonProperty("categoryId") Integer categoryId,
       @JsonProperty("description") String description,
       @JsonProperty("expenseDate") String expenseDate) {
-    this(amount, category, description, parseExpenseDate(expenseDate));
+    this(amount, categoryId, description, parseExpenseDate(expenseDate));
   }
 
   private static LocalDateTime parseExpenseDate(String rawValue) {

@@ -34,7 +34,7 @@ class SecurityIT extends AbstractIntegrationTest {
         assertThrows(
             HttpClientErrorException.Unauthorized.class,
             () ->
-          anonymousRestTemplate.getForEntity(baseUrl() + "/api/policies", PolicyDto[].class));
+                anonymousRestTemplate.getForEntity(baseUrl() + "/api/policies", PolicyDto[].class));
     assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
   }
 
@@ -51,16 +51,13 @@ class SecurityIT extends AbstractIntegrationTest {
             null,
             new BigDecimal("100"),
             new BigDecimal("1000"),
-            "Travel",
             1);
     HttpClientErrorException.Unauthorized ex =
         assertThrows(
             HttpClientErrorException.Unauthorized.class,
             () ->
                 anonymousRestTemplate.postForEntity(
-            baseUrl() + "/api/policies",
-                    request,
-            PolicyDto.class));
+                    baseUrl() + "/api/policies", request, PolicyDto.class));
     assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
   }
 
@@ -72,10 +69,10 @@ class SecurityIT extends AbstractIntegrationTest {
     headers.setContentType(MediaType.APPLICATION_JSON);
     ResponseEntity<PolicyDto[]> response =
         anonymousRestTemplate.exchange(
-        baseUrl() + "/api/policies",
+            baseUrl() + "/api/policies",
             HttpMethod.GET,
             new HttpEntity<>(headers),
-        PolicyDto[].class);
+            PolicyDto[].class);
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertNotNull(response.getBody());
   }
@@ -89,10 +86,7 @@ class SecurityIT extends AbstractIntegrationTest {
     headers.add("Access-Control-Request-Headers", "authorization,content-type");
     ResponseEntity<Void> response =
         anonymousRestTemplate.exchange(
-        baseUrl() + "/api/policies",
-            HttpMethod.OPTIONS,
-            new HttpEntity<>(headers),
-        Void.class);
+            baseUrl() + "/api/policies", HttpMethod.OPTIONS, new HttpEntity<>(headers), Void.class);
     assertEquals(HttpStatus.OK, response.getStatusCode());
   }
 }

@@ -13,5 +13,4 @@ public record CreatePolicyDto(
     LocalDateTime expiresAt,
     BigDecimal minPrice,
     BigDecimal maxPrice,
-    String category,
     Integer authorizedRole) {}

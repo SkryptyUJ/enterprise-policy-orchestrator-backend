@@ -50,9 +50,9 @@ public class ExpenseRequestController {
   @DeleteMapping("/{expenseRequestId}")
   @ResponseStatus(HttpStatus.OK)
   public ExpenseRequestDto cancelExpenseRequest(
-      @AuthenticationPrincipal Jwt jwt,
-      @PathVariable("expenseRequestId") Long expenseRequestId) {
-    return expenseRequestService.cancelExpenseRequest(getAuthenticatedUserId(jwt), expenseRequestId);
+      @AuthenticationPrincipal Jwt jwt, @PathVariable("expenseRequestId") Long expenseRequestId) {
+    return expenseRequestService.cancelExpenseRequest(
+        getAuthenticatedUserId(jwt), expenseRequestId);
   }
 
   @GetMapping("/history/all")
@@ -69,8 +69,7 @@ public class ExpenseRequestController {
 
   @GetMapping("/{expenseRequestId}/history")
   public List<ExpenseRequestHistoryDto> getExpenseRequestStatusHistory(
-      @AuthenticationPrincipal Jwt jwt,
-      @PathVariable("expenseRequestId") Long expenseRequestId) {
+      @AuthenticationPrincipal Jwt jwt, @PathVariable("expenseRequestId") Long expenseRequestId) {
     return expenseRequestService.getExpenseRequestStatusHistory(
         getAuthenticatedUserId(jwt), expenseRequestId);
   }
