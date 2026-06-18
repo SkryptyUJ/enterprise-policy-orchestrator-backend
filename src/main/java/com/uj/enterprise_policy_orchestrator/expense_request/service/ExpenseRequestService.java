@@ -13,7 +13,6 @@ import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto
 import com.uj.enterprise_policy_orchestrator.policy.repository.PolicyRepository;
 import com.uj.enterprise_policy_orchestrator.policy.service.PolicyService;
 import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRepository;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
@@ -41,6 +40,12 @@ public class ExpenseRequestService {
 
   @Transactional
   public ExpenseRequestDto createExpenseRequest(String userId, CreateExpenseRequestDto dto) {
+    return createExpenseRequest(userId, null, dto);
+  }
+
+  @Transactional
+  public ExpenseRequestDto createExpenseRequest(
+      String userId, Set<Integer> userRoleIds, CreateExpenseRequestDto dto) {
     categoryService.getCategory(dto.categoryId());
 
     ExpenseRequest request =
@@ -53,7 +58,10 @@ public class ExpenseRequestService {
             .build();
 
     Set<Policy> policiesMatchingCategoryAndDate = findPoliciesMatchingCategoryAndDate(request);
-    Set<Policy> applicablePolicies = findApplicablePolicies(request);
+    Set<Policy> applicablePolicies =
+        userRoleIds == null
+            ? findApplicablePolicies(request)
+            : findApplicablePolicies(request, userRoleIds);
     if (applicablePolicies.isEmpty()) {
       request.setStatus(ExpenseRequestStatus.DECLINED);
       throw new NoApplicablePoliciesException(buildNoMatchingPoliciesMessage(request));
@@ -81,15 +89,28 @@ public class ExpenseRequestService {
   }
 
   private Set<Policy> findApplicablePolicies(ExpenseRequest exp) {
-    LocalDateTime expenseDateForMatching = exp.getExpenseDate();
+    LocalDateTime expenseDateForMatching = normalizeExpenseDateForMatching(exp.getExpenseDate());
+
+    return policyService.findApplicablePolicies(
+        exp.getCategoryId(), expenseDateForMatching, exp.getAmount());
+  }
+
+  private Set<Policy> findApplicablePolicies(ExpenseRequest exp, Set<Integer> userRoleIds) {
+    LocalDateTime expenseDateForMatching = normalizeExpenseDateForMatching(exp.getExpenseDate());
+
+    return policyService.findApplicablePolicies(
+        exp.getCategoryId(), expenseDateForMatching, exp.getAmount(), userRoleIds);
+  }
+
+  private LocalDateTime normalizeExpenseDateForMatching(LocalDateTime expenseDate) {
+    LocalDateTime expenseDateForMatching = expenseDate;
     if (expenseDateForMatching != null
         && expenseDateForMatching.toLocalTime().equals(LocalTime.MIDNIGHT)) {
       // Date-only input is deserialized to 00:00; match policies against the entire day.
       expenseDateForMatching = expenseDateForMatching.with(LocalTime.MAX);
     }
 
-    return policyService.findApplicablePolicies(
-        exp.getCategoryId(), expenseDateForMatching, exp.getAmount());
+    return expenseDateForMatching;
   }
 
   private Set<Policy> findPoliciesMatchingCategoryAndDate(ExpenseRequest exp) {
@@ -167,8 +188,7 @@ public class ExpenseRequestService {
     return policy.getPolicyId() == null ? "Unknown policy" : policy.getPolicyId();
   }
 
-  private String buildNoMatchingPoliciesMessage(
-      ExpenseRequest request) {
+  private String buildNoMatchingPoliciesMessage(ExpenseRequest request) {
     LocalDateTime expenseDateForMatching = request.getExpenseDate();
     if (expenseDateForMatching != null
         && expenseDateForMatching.toLocalTime().equals(LocalTime.MIDNIGHT)) {

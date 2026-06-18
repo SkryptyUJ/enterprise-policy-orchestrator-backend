@@ -2,6 +2,7 @@ package com.uj.enterprise_policy_orchestrator.integration;
 
 import java.net.http.HttpClient;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -18,6 +19,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 class IntegrationTestConfiguration {
 
   static final String TEST_BEARER_TOKEN = "test-token";
+  static final String AUTH0_NAMESPACE = "https://policy-orchestrator.com";
 
   @Bean
   @ServiceConnection
@@ -55,6 +57,7 @@ class IntegrationTestConfiguration {
   public JwtDecoder testJwtDecoder() {
     return token -> {
       Instant now = Instant.now();
+      DecodedTestToken decodedToken = DecodedTestToken.from(token);
       return new Jwt(
           token,
           now,
@@ -62,13 +65,33 @@ class IntegrationTestConfiguration {
           Map.of("alg", "none"),
           Map.of(
               "sub",
-              token,
+              decodedToken.subject(),
               "iss",
               "https://test-issuer/",
               "aud",
               List.of("test-audience"),
+              AUTH0_NAMESPACE + "/roles",
+              decodedToken.roles(),
               "scope",
               "read write"));
     };
+  }
+
+  private record DecodedTestToken(String subject, List<String> roles) {
+    private static final String ROLES_DELIMITER = "__roles_";
+
+    private static DecodedTestToken from(String token) {
+      String[] parts = token.split(ROLES_DELIMITER, 2);
+      if (parts.length == 1) {
+        return new DecodedTestToken(token, List.of("admin"));
+      }
+
+      List<String> roles =
+          Arrays.stream(parts[1].split(","))
+              .map(String::trim)
+              .filter(role -> !role.isBlank())
+              .toList();
+      return new DecodedTestToken(parts[0], roles);
+    }
   }
 }

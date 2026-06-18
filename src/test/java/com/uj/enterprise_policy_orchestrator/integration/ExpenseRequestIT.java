@@ -162,10 +162,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
@@ -222,10 +219,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       ResponseEntity<ExpenseRequestDto> response =
           restTemplate.postForEntity(
-              baseUrl() + "/api/expense-requests",
-              createRequest,
-              ExpenseRequestDto.class,
-              userId);
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
 
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
@@ -421,6 +415,105 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals(1, expenseRequests.size());
       var savedRequest = expenseRequests.getFirst();
       assertFalse(savedRequest.getApplicablePolicies().isEmpty());
+    }
+
+    @Test
+    @DisplayName("should match only policies authorized for user role")
+    void shouldMatchOnlyPoliciesAuthorizedForUserRole() {
+      String userId = "role-matched-user__roles_employee";
+      LocalDateTime policyStartsAt = LocalDateTime.of(2026, 1, 1, 0, 0, 0);
+
+      Policy employeePolicy =
+          Policy.builder()
+              .policyId("EMPLOYEE-POLICY")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Employee Policy")
+              .description("Employee role policy")
+              .version(1)
+              .startsAt(policyStartsAt)
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .authorizedRole(1)
+              .build();
+
+      Policy managerPolicy =
+          Policy.builder()
+              .policyId("MANAGER-POLICY")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Manager Policy")
+              .description("Manager role policy")
+              .version(1)
+              .startsAt(policyStartsAt)
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .authorizedRole(2)
+              .build();
+
+      policyRepository.save(employeePolicy);
+      policyRepository.save(managerPolicy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("1500.00"),
+              1,
+              "Employee-only policy match",
+              LocalDateTime.of(2026, 3, 20, 12, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> response =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/expense-requests", createRequest, ExpenseRequestDto.class, userId);
+
+      assertEquals(HttpStatus.CREATED, response.getStatusCode());
+      var savedRequest = expenseRequestRepository.findAllWithApplicablePolicies().getFirst();
+      assertEquals(1, savedRequest.getApplicablePolicies().size());
+      assertEquals(
+          "EMPLOYEE-POLICY", savedRequest.getApplicablePolicies().iterator().next().getPolicyId());
+    }
+
+    @Test
+    @DisplayName("should decline when policies exist only for other roles")
+    void shouldDeclineWhenOnlyOtherRolePoliciesMatch() {
+      String userId = "role-declined-user__roles_employee";
+      LocalDateTime policyStartsAt = LocalDateTime.of(2026, 1, 1, 0, 0, 0);
+
+      Policy managerPolicy =
+          Policy.builder()
+              .policyId("MANAGER-ONLY-POLICY")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Manager Only Policy")
+              .description("Manager role policy")
+              .version(1)
+              .startsAt(policyStartsAt)
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("5000"))
+              .authorizedRole(2)
+              .build();
+      policyRepository.save(managerPolicy);
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("1500.00"),
+              1,
+              "No employee policy",
+              LocalDateTime.of(2026, 3, 20, 12, 0, 0));
+
+      HttpClientErrorException.BadRequest exception =
+          assertThrows(
+              HttpClientErrorException.BadRequest.class,
+              () ->
+                  restTemplate.postForEntity(
+                      baseUrl() + "/api/expense-requests",
+                      createRequest,
+                      ExpenseRequestDto.class,
+                      userId));
+
+      assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }
 
     @Test
