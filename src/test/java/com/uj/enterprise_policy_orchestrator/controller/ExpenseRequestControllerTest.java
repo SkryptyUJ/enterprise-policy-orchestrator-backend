@@ -15,6 +15,7 @@ import com.uj.enterprise_policy_orchestrator.policy.dto.ExpenseRequestHistoryDto
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -49,12 +50,12 @@ class ExpenseRequestControllerTest {
       ExpenseRequestDto expected =
           sampleExpenseRequest(100L, userId, ExpenseRequestStatus.WAITING_FOR_APPROVAL);
 
-      when(expenseRequestService.createExpenseRequest(userId, dto)).thenReturn(expected);
+      when(expenseRequestService.createExpenseRequest(userId, Set.of(1), dto)).thenReturn(expected);
 
       ExpenseRequestDto result = expenseRequestController.createExpenseRequest(jwtFor(userId), dto);
 
       assertEquals(expected, result);
-      verify(expenseRequestService).createExpenseRequest(userId, dto);
+      verify(expenseRequestService).createExpenseRequest(userId, Set.of(1), dto);
     }
 
     @Test
@@ -282,6 +283,7 @@ class ExpenseRequestControllerTest {
     return Jwt.withTokenValue("token-" + subject)
         .header("alg", "none")
         .claim("sub", subject)
+        .claim("roles", List.of("employee"))
         .build();
   }
 
@@ -300,8 +302,8 @@ class ExpenseRequestControllerTest {
         null,
         null,
         null,
-          null,
-          null);
+        null,
+        null);
   }
 
   private static ExpenseRequestHistoryDto sampleHistory(

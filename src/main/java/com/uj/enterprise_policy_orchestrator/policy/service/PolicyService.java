@@ -133,11 +133,30 @@ public class PolicyService {
     List<Policy> applicablePolicies =
         policyRepository.findByCategoryIdAndDateAndAmount(categoryId, expenseDate, amount);
 
+    return selectLatestPolicyVersions(applicablePolicies);
+  }
+
+  public Set<Policy> findApplicablePolicies(
+      Integer categoryId, LocalDateTime expenseDate, BigDecimal amount, Set<Integer> userRoleIds) {
+    categoryService.getCategory(categoryId);
+    List<Policy> applicablePolicies =
+        policyRepository.findByCategoryIdAndDateAndAmount(categoryId, expenseDate, amount);
+    Set<Integer> effectiveRoleIds = userRoleIds == null ? Set.of() : userRoleIds;
+
+    List<Policy> authorizedPolicies =
+        applicablePolicies.stream()
+            .filter(policy -> isAuthorizedForRole(policy, effectiveRoleIds))
+            .toList();
+
+    return selectLatestPolicyVersions(authorizedPolicies);
+  }
+
+  private Set<Policy> selectLatestPolicyVersions(List<Policy> policies) {
     Comparator<Policy> latestVersionComparator =
         Comparator.comparing(Policy::getVersion).thenComparing(Policy::getUpdatedAt);
 
     Map<String, Policy> latestByPolicyId =
-        applicablePolicies.stream()
+        policies.stream()
             .collect(
                 Collectors.toMap(
                     Policy::getPolicyId,
@@ -145,6 +164,13 @@ public class PolicyService {
                     BinaryOperator.maxBy(latestVersionComparator)));
 
     return new HashSet<>(latestByPolicyId.values());
+  }
+
+  private boolean isAuthorizedForRole(Policy policy, Set<Integer> userRoleIds) {
+    Integer authorizedRole = policy.getAuthorizedRole();
+    return authorizedRole == null
+        || userRoleIds.contains(authorizedRole)
+        || userRoleIds.contains(4);
   }
 
   public PolicyDto toDto(Policy entity) {

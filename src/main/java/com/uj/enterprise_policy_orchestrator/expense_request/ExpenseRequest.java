@@ -54,12 +54,12 @@ public class ExpenseRequest {
       inverseJoinColumns = @JoinColumn(name = "policy_id"))
   private final Set<Policy> applicablePolicies = new HashSet<>();
 
-    @ElementCollection
-    @CollectionTable(
+  @ElementCollection
+  @CollectionTable(
       name = "expense_request_conflicting_policy",
       joinColumns = @JoinColumn(name = "request_id"))
-    @Column(name = "policy_name", nullable = false)
-    private final Set<String> conflictingPolicyNames = new LinkedHashSet<>();
+  @Column(name = "policy_name", nullable = false)
+  private final Set<String> conflictingPolicyNames = new LinkedHashSet<>();
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "applied_policy_id")

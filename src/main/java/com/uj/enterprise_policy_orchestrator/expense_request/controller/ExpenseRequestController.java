@@ -1,5 +1,6 @@
 package com.uj.enterprise_policy_orchestrator.expense_request.controller;
 
+import com.uj.enterprise_policy_orchestrator.config.JwtRoleExtractor;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.ApproveExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.CreateExpenseRequestDto;
 import com.uj.enterprise_policy_orchestrator.expense_request.dto.ExpenseRequestDto;
@@ -32,7 +33,8 @@ public class ExpenseRequestController {
   @ResponseStatus(HttpStatus.CREATED)
   public ExpenseRequestDto createExpenseRequest(
       @AuthenticationPrincipal Jwt jwt, @RequestBody CreateExpenseRequestDto dto) {
-    return expenseRequestService.createExpenseRequest(getAuthenticatedUserId(jwt), dto);
+    return expenseRequestService.createExpenseRequest(
+        getAuthenticatedUserId(jwt), JwtRoleExtractor.extractPolicyRoleIds(jwt), dto);
   }
 
   @GetMapping

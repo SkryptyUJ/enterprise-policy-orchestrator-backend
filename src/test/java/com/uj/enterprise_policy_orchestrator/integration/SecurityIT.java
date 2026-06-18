@@ -78,6 +78,72 @@ class SecurityIT extends AbstractIntegrationTest {
   }
 
   @Test
+  @DisplayName("Employee token cannot create policy")
+  void shouldRejectEmployeeWhenCreatingPolicy() {
+    CreatePolicyDto request =
+        new CreatePolicyDto(
+            Optional.empty(),
+            1,
+            "Policy",
+            "desc",
+            LocalDateTime.now(),
+            null,
+            new BigDecimal("100"),
+            new BigDecimal("1000"),
+            1);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth("employee-user__roles_employee");
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    HttpClientErrorException.Forbidden ex =
+        assertThrows(
+            HttpClientErrorException.Forbidden.class,
+            () ->
+                anonymousRestTemplate.exchange(
+                    baseUrl() + "/api/policies",
+                    HttpMethod.POST,
+                    new HttpEntity<>(request, headers),
+                    PolicyDto.class));
+
+    assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+  }
+
+  @Test
+  @DisplayName("Manager token can access expense review endpoint")
+  void shouldAllowManagerToAccessExpenseReview() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth("manager-user__roles_manager");
+
+    ResponseEntity<String> response =
+        anonymousRestTemplate.exchange(
+            baseUrl() + "/api/expense-requests/review",
+            HttpMethod.GET,
+            new HttpEntity<>(headers),
+            String.class);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+  }
+
+  @Test
+  @DisplayName("Employee token cannot access expense review endpoint")
+  void shouldRejectEmployeeFromExpenseReview() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth("employee-user__roles_employee");
+
+    HttpClientErrorException.Forbidden ex =
+        assertThrows(
+            HttpClientErrorException.Forbidden.class,
+            () ->
+                anonymousRestTemplate.exchange(
+                    baseUrl() + "/api/expense-requests/review",
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    PolicyDto[].class));
+
+    assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+  }
+
+  @Test
   @DisplayName("CORS preflight OPTIONS request is permitted without authentication")
   void shouldAllowCorsPreflightWithoutAuthentication() {
     HttpHeaders headers = new HttpHeaders();
