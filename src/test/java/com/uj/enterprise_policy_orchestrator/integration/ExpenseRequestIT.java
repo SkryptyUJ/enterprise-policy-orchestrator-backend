@@ -18,6 +18,7 @@ import com.uj.enterprise_policy_orchestrator.repository.ExpenseRequestHistoryRep
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -113,6 +114,125 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
 
       var afterCount = expenseRequestRepository.count();
       assertEquals(beforeCount + 1, afterCount);
+    }
+
+    @Test
+    @DisplayName("should escalate request when policies are conflicting")
+    void shouldEscalateRequestWhenPoliciesAreConflicting() {
+      String userId = "expense-user-conflict-1";
+
+      Policy matchingPolicy =
+          Policy.builder()
+              .policyId("TRAVEL-FLEX-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Flexible")
+              .description("Allows higher budgets")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("2000"))
+              .authorizedRole(2)
+              .build();
+
+      Policy nonMatchingPolicy =
+          Policy.builder()
+              .policyId("TRAVEL-STRICT-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Strict")
+              .description("Limits budget")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("0"))
+              .maxPrice(new BigDecimal("1000"))
+              .authorizedRole(2)
+              .build();
+
+      policyRepository.saveAll(List.of(matchingPolicy, nonMatchingPolicy));
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("1200.00"),
+              1,
+              "Flight and hotel",
+              LocalDateTime.of(2026, 3, 22, 11, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> response =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      assertEquals(HttpStatus.CREATED, response.getStatusCode());
+      assertNotNull(response.getBody());
+      assertEquals(ExpenseRequestStatus.REQUIRES_ESCALATION, response.getBody().status());
+      assertNotNull(response.getBody().conflictingPolicyNames());
+      assertEquals(2, response.getBody().conflictingPolicyNames().size());
+      assertTrue(response.getBody().conflictingPolicyNames().contains("Travel Flexible"));
+      assertTrue(response.getBody().conflictingPolicyNames().contains("Travel Strict"));
+    }
+
+    @Test
+    @DisplayName("should not escalate request when active policies are not conflicting")
+    void shouldNotEscalateRequestWhenActivePoliciesAreNotConflicting() {
+      String userId = "expense-user-conflict-2";
+
+      Policy policyOne =
+          Policy.builder()
+              .policyId("TRAVEL-NON-CONFLICT-001")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Non Conflict 1")
+              .description("Allows medium budgets")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("100"))
+              .maxPrice(new BigDecimal("3000"))
+              .authorizedRole(2)
+              .build();
+
+      Policy policyTwo =
+          Policy.builder()
+              .policyId("TRAVEL-NON-CONFLICT-002")
+              .authorUserId("admin")
+              .categoryId(1)
+              .name("Travel Non Conflict 2")
+              .description("Allows broad budgets")
+              .version(1)
+              .startsAt(LocalDateTime.of(2026, 1, 1, 0, 0, 0))
+              .expiresAt(null)
+              .minPrice(new BigDecimal("0"))
+              .maxPrice(new BigDecimal("5000"))
+              .authorizedRole(2)
+              .build();
+
+      policyRepository.saveAll(List.of(policyOne, policyTwo));
+
+      CreateExpenseRequestDto createRequest =
+          new CreateExpenseRequestDto(
+              new BigDecimal("1200.00"),
+              1,
+              "Hotel and train",
+              LocalDateTime.of(2026, 3, 22, 11, 0, 0));
+
+      ResponseEntity<ExpenseRequestDto> response =
+          restTemplate.postForEntity(
+              baseUrl() + "/api/expense-requests",
+              createRequest,
+              ExpenseRequestDto.class,
+              userId);
+
+      assertEquals(HttpStatus.CREATED, response.getStatusCode());
+      assertNotNull(response.getBody());
+      assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, response.getBody().status());
+      assertTrue(
+          response.getBody().conflictingPolicyNames() == null
+              || response.getBody().conflictingPolicyNames().isEmpty());
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.uj.enterprise_policy_orchestrator.expense_request.enums.ExpenseReques
 import com.uj.enterprise_policy_orchestrator.policy.dto.PolicyDto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ExpenseRequestDto(
     Long id,
@@ -16,6 +17,7 @@ public record ExpenseRequestDto(
     LocalDateTime submittedAt,
     ExpenseRequestStatus status,
     PolicyDto appliedPolicy,
+    List<String> conflictingPolicyNames,
     String decisionRationale,
     String decidedBy,
     LocalDateTime decidedAt) {}

@@ -300,7 +300,8 @@ class ExpenseRequestControllerTest {
         null,
         null,
         null,
-        null);
+          null,
+          null);
   }
 
   private static ExpenseRequestHistoryDto sampleHistory(
