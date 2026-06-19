@@ -280,7 +280,10 @@ public class ExpenseRequestService {
 
   @Transactional
   public ExpenseRequestDto approveExpenseRequest(
-      String reviewerUserId, Long expenseRequestId, String decisionRationale) {
+      String reviewerUserId,
+      Long expenseRequestId,
+      String decisionRationale,
+      String appliedPolicy) {
     if (decisionRationale == null || decisionRationale.trim().isEmpty()) {
       throw new IllegalArgumentException("Decision rationale must not be empty");
     }
@@ -298,12 +301,26 @@ public class ExpenseRequestService {
           "Expense request cannot be approved with status: " + request.getStatus());
     }
 
+    String resolvedAppliedPolicy =
+        (appliedPolicy == null || appliedPolicy.isBlank()) ? null : appliedPolicy.trim();
+    if (resolvedAppliedPolicy != null) {
+      Set<String> validPolicyNames =
+          request.getApplicablePolicies().stream()
+              .map(p -> p.getName() != null ? p.getName() : p.getPolicyId())
+              .collect(Collectors.toSet());
+      if (!validPolicyNames.contains(resolvedAppliedPolicy)) {
+        throw new IllegalArgumentException(
+            "appliedPolicy must be one of the applicable policies for this expense request");
+      }
+    }
+
     ExpenseRequestStatus previousStatus = request.getStatus();
 
     request.setStatus(ExpenseRequestStatus.APPROVED);
     request.setDecisionRationale(decisionRationale.trim());
     request.setDecidedBy(reviewerUserId);
     request.setDecidedAt(LocalDateTime.now());
+    request.setAppliedPolicyName(resolvedAppliedPolicy);
 
     ExpenseRequest approved = expenseRequestRepository.save(request);
 
@@ -407,6 +424,7 @@ public class ExpenseRequestService {
         entity.getSubmittedAt(),
         entity.getStatus(),
         applicablePolicyNames,
+        entity.getAppliedPolicyName(),
         entity.getDecisionRationale(),
         entity.getDecidedBy(),
         entity.getDecidedAt());

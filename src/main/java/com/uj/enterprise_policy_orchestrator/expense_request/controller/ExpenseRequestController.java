@@ -98,7 +98,7 @@ public class ExpenseRequestController {
       @PathVariable Long requestId,
       @RequestBody ApproveExpenseRequestDto dto) {
     return expenseRequestService.approveExpenseRequest(
-        getAuthenticatedUserId(jwt), requestId, dto.decisionRationale());
+        getAuthenticatedUserId(jwt), requestId, dto.decisionRationale(), dto.appliedPolicy());
   }
 
   @PatchMapping("/review/{requestId}/decline")

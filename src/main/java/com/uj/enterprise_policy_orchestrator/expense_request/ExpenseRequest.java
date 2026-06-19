@@ -53,6 +53,9 @@ public class ExpenseRequest {
       inverseJoinColumns = @JoinColumn(name = "policy_id"))
   private final Set<Policy> applicablePolicies = new HashSet<>();
 
+  @Column(name = "applied_policy_name")
+  private String appliedPolicyName;
+
   @Column(name = "decision_rationale", columnDefinition = "TEXT")
   private String decisionRationale;
 
