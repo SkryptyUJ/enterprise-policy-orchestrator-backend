@@ -154,11 +154,12 @@ class ExpenseRequestControllerTest {
     void shouldDelegateApproveWithReviewerIdFromJwt() {
       String reviewerId = "manager-1";
       Long requestId = 71L;
-      ApproveExpenseRequestDto dto = new ApproveExpenseRequestDto("policy compliant");
+      ApproveExpenseRequestDto dto = new ApproveExpenseRequestDto("policy compliant", null);
       ExpenseRequestDto expected =
           sampleExpenseRequest(requestId, "employee-3", ExpenseRequestStatus.APPROVED);
 
-      when(expenseRequestService.approveExpenseRequest(reviewerId, requestId, "policy compliant"))
+      when(expenseRequestService.approveExpenseRequest(
+              reviewerId, requestId, "policy compliant", null))
           .thenReturn(expected);
 
       ExpenseRequestDto result =
@@ -166,7 +167,7 @@ class ExpenseRequestControllerTest {
 
       assertEquals(expected, result);
       verify(expenseRequestService)
-          .approveExpenseRequest(reviewerId, requestId, "policy compliant");
+          .approveExpenseRequest(reviewerId, requestId, "policy compliant", null);
     }
 
     @Test
@@ -174,7 +175,7 @@ class ExpenseRequestControllerTest {
     void shouldDelegateDeclineWithReviewerIdFromJwt() {
       String reviewerId = "manager-2";
       Long requestId = 72L;
-      ApproveExpenseRequestDto dto = new ApproveExpenseRequestDto("outside policy");
+      ApproveExpenseRequestDto dto = new ApproveExpenseRequestDto("outside policy", null);
       ExpenseRequestDto expected =
           sampleExpenseRequest(requestId, "employee-4", ExpenseRequestStatus.DECLINED);
 
@@ -299,7 +300,7 @@ class ExpenseRequestControllerTest {
         LocalDateTime.of(2026, 5, 13, 0, 0),
         LocalDateTime.of(2026, 5, 14, 10, 0),
         status,
-        null,
+        List.of(),
         null,
         null,
         null,

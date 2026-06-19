@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -68,20 +67,21 @@ public class ExpenseRequestService {
     }
 
     request.getApplicablePolicies().addAll(applicablePolicies);
-    Set<String> conflictingPolicyNames =
-        findConflictingPolicyNames(policiesMatchingCategoryAndDate, applicablePolicies);
-    if (!conflictingPolicyNames.isEmpty()) {
+    Set<String> applicablePolicyIds =
+        applicablePolicies.stream().map(Policy::getPolicyId).collect(Collectors.toSet());
+    boolean hasConflict =
+        policiesMatchingCategoryAndDate.stream()
+            .anyMatch(p -> !applicablePolicyIds.contains(p.getPolicyId()));
+    if (hasConflict) {
       request.setStatus(ExpenseRequestStatus.REQUIRES_ESCALATION);
-      request.getConflictingPolicyNames().addAll(conflictingPolicyNames);
     }
 
     ExpenseRequest saved = expenseRequestRepository.save(request);
 
     String creationReason =
-        conflictingPolicyNames.isEmpty()
-            ? "Expense request created"
-            : "Expense request escalated due to policy conflict: "
-                + String.join(" vs ", conflictingPolicyNames);
+        hasConflict
+            ? "Expense request escalated due to policy conflict"
+            : "Expense request created";
 
     recordHistory(saved.getId(), userId, null, saved.getStatus(), creationReason);
 
@@ -140,52 +140,6 @@ public class ExpenseRequestService {
     }
 
     return new LinkedHashSet<>(latestByPolicyId.values());
-  }
-
-  private Set<String> findConflictingPolicyNames(
-      Set<Policy> policiesMatchingCategoryAndDate, Set<Policy> applicablePolicies) {
-    if (policiesMatchingCategoryAndDate.isEmpty() || applicablePolicies.isEmpty()) {
-      return Set.of();
-    }
-
-    Set<String> applicablePolicyIds =
-        applicablePolicies.stream().map(Policy::getPolicyId).collect(Collectors.toSet());
-
-    Optional<Policy> matchingPolicy = applicablePolicies.stream().min(this::comparePolicyDisplay);
-    Optional<Policy> nonMatchingPolicy =
-        policiesMatchingCategoryAndDate.stream()
-            .filter(policy -> !applicablePolicyIds.contains(policy.getPolicyId()))
-            .min(this::comparePolicyDisplay);
-
-    if (matchingPolicy.isEmpty() || nonMatchingPolicy.isEmpty()) {
-      return Set.of();
-    }
-
-    Set<String> conflicts = new LinkedHashSet<>();
-    conflicts.add(resolvePolicyDisplayName(matchingPolicy.get()));
-    conflicts.add(resolvePolicyDisplayName(nonMatchingPolicy.get()));
-    return conflicts;
-  }
-
-  private int comparePolicyDisplay(Policy left, Policy right) {
-    String leftDisplay = resolvePolicyDisplayName(left);
-    String rightDisplay = resolvePolicyDisplayName(right);
-
-    int byName = leftDisplay.compareToIgnoreCase(rightDisplay);
-    if (byName != 0) {
-      return byName;
-    }
-
-    String leftPolicyId = left.getPolicyId() == null ? "" : left.getPolicyId();
-    String rightPolicyId = right.getPolicyId() == null ? "" : right.getPolicyId();
-    return leftPolicyId.compareToIgnoreCase(rightPolicyId);
-  }
-
-  private String resolvePolicyDisplayName(Policy policy) {
-    if (policy.getName() != null && !policy.getName().isBlank()) {
-      return policy.getName();
-    }
-    return policy.getPolicyId() == null ? "Unknown policy" : policy.getPolicyId();
   }
 
   private String buildNoMatchingPoliciesMessage(ExpenseRequest request) {
@@ -254,7 +208,6 @@ public class ExpenseRequestService {
     request.setStatus(ExpenseRequestStatus.CANCELLED);
     ExpenseRequest cancelled = expenseRequestRepository.save(request);
 
-    // Record history
     recordHistory(
         cancelled.getId(),
         userId,
@@ -327,7 +280,10 @@ public class ExpenseRequestService {
 
   @Transactional
   public ExpenseRequestDto approveExpenseRequest(
-      String reviewerUserId, Long expenseRequestId, String decisionRationale) {
+      String reviewerUserId,
+      Long expenseRequestId,
+      String decisionRationale,
+      String appliedPolicy) {
     if (decisionRationale == null || decisionRationale.trim().isEmpty()) {
       throw new IllegalArgumentException("Decision rationale must not be empty");
     }
@@ -345,12 +301,26 @@ public class ExpenseRequestService {
           "Expense request cannot be approved with status: " + request.getStatus());
     }
 
+    String resolvedAppliedPolicy =
+        (appliedPolicy == null || appliedPolicy.isBlank()) ? null : appliedPolicy.trim();
+    if (resolvedAppliedPolicy != null) {
+      Set<String> validPolicyNames =
+          request.getApplicablePolicies().stream()
+              .map(p -> p.getName() != null ? p.getName() : p.getPolicyId())
+              .collect(Collectors.toSet());
+      if (!validPolicyNames.contains(resolvedAppliedPolicy)) {
+        throw new IllegalArgumentException(
+            "appliedPolicy must be one of the applicable policies for this expense request");
+      }
+    }
+
     ExpenseRequestStatus previousStatus = request.getStatus();
 
     request.setStatus(ExpenseRequestStatus.APPROVED);
     request.setDecisionRationale(decisionRationale.trim());
     request.setDecidedBy(reviewerUserId);
     request.setDecidedAt(LocalDateTime.now());
+    request.setAppliedPolicyName(resolvedAppliedPolicy);
 
     ExpenseRequest approved = expenseRequestRepository.save(request);
 
@@ -403,7 +373,6 @@ public class ExpenseRequestService {
     return toDto(declined);
   }
 
-  @Transactional
   private void recordHistory(
       Long requestId,
       String userId,
@@ -438,10 +407,11 @@ public class ExpenseRequestService {
   }
 
   private ExpenseRequestDto toDto(ExpenseRequest entity) {
-    List<String> conflictingPolicyNames =
-        entity.getConflictingPolicyNames().isEmpty()
-            ? null
-            : entity.getConflictingPolicyNames().stream().sorted().toList();
+    List<String> applicablePolicyNames =
+        entity.getApplicablePolicies().stream()
+            .map(p -> p.getName() != null ? p.getName() : p.getPolicyId())
+            .sorted()
+            .toList();
 
     return new ExpenseRequestDto(
         entity.getId(),
@@ -453,8 +423,8 @@ public class ExpenseRequestService {
         entity.getExpenseDate(),
         entity.getSubmittedAt(),
         entity.getStatus(),
-        entity.getAppliedPolicy() != null ? policyService.toDto(entity.getAppliedPolicy()) : null,
-        conflictingPolicyNames,
+        applicablePolicyNames,
+        entity.getAppliedPolicyName(),
         entity.getDecisionRationale(),
         entity.getDecidedBy(),
         entity.getDecidedAt());
