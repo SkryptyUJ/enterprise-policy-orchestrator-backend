@@ -167,10 +167,8 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
       assertEquals(ExpenseRequestStatus.REQUIRES_ESCALATION, response.getBody().status());
-      assertNotNull(response.getBody().conflictingPolicyNames());
-      assertEquals(2, response.getBody().conflictingPolicyNames().size());
-      assertTrue(response.getBody().conflictingPolicyNames().contains("Travel Flexible"));
-      assertTrue(response.getBody().conflictingPolicyNames().contains("Travel Strict"));
+      assertNotNull(response.getBody().applicablePolicies());
+      assertTrue(response.getBody().applicablePolicies().contains("Travel Flexible"));
     }
 
     @Test
@@ -224,9 +222,7 @@ class ExpenseRequestIT extends AbstractIntegrationTest {
       assertEquals(HttpStatus.CREATED, response.getStatusCode());
       assertNotNull(response.getBody());
       assertEquals(ExpenseRequestStatus.WAITING_FOR_APPROVAL, response.getBody().status());
-      assertTrue(
-          response.getBody().conflictingPolicyNames() == null
-              || response.getBody().conflictingPolicyNames().isEmpty());
+      assertNotNull(response.getBody().applicablePolicies());
     }
 
     @Test

@@ -299,8 +299,7 @@ class ExpenseRequestControllerTest {
         LocalDateTime.of(2026, 5, 13, 0, 0),
         LocalDateTime.of(2026, 5, 14, 10, 0),
         status,
-        null,
-        null,
+        List.of(),
         null,
         null,
         null);
